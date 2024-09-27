@@ -1,14 +1,21 @@
+I am not seing the candle sticks on my chart. I need you to focus on strictly fixing this issue:
+
+Here is my code base:
+
 # Project Code Overview
 
-Generated on: Thu Sep 26 18:52:47 CDT 2024
+Generated on: Thu Sep 26 20:16:46 CDT 2024
 
 ## Table of Contents
 
 - [./Stories/add_indicators_button_feature.md](#file---Stories-add-indicators-button-feature-md)
-- [./ai_client.py](#file---ai-client-py)
-- [./data_fetcher.py](#file---data-fetcher-py)
+- [./config/settings.py](#file---config-settings-py)
 - [./main.py](#file---main-py)
 - [./requirements.txt](#file---requirements-txt)
+- [./src/ai/ai_client.py](#file---src-ai-ai-client-py)
+- [./src/data/data_fetcher.py](#file---src-data-data-fetcher-py)
+- [./src/routes/api_routes.py](#file---src-routes-api-routes-py)
+- [./src/routes/main_routes.py](#file---src-routes-main-routes-py)
 - [./static/css/ai-chat.css](#file---static-css-ai-chat-css)
 - [./static/css/chart.css](#file---static-css-chart-css)
 - [./static/css/components.css](#file---static-css-components-css)
@@ -17,16 +24,16 @@ Generated on: Thu Sep 26 18:52:47 CDT 2024
 - [./static/css/modal.css](#file---static-css-modal-css)
 - [./static/css/responsive.css](#file---static-css-responsive-css)
 - [./static/css/sidebar.css](#file---static-css-sidebar-css)
-- [./static/css/styles.css](#file---static-css-styles-css)
 - [./static/css/variables.css](#file---static-css-variables-css)
 - [./static/css/watchlist.css](#file---static-css-watchlist-css)
 - [./static/js/app.js](#file---static-js-app-js)
-- [./static/js/chart.js](#file---static-js-chart-js)
-- [./static/js/indicators.js](#file---static-js-indicators-js)
-- [./static/js/indicators/divergence.js](#file---static-js-indicators-divergence-js)
-- [./static/js/indicators/macd.js](#file---static-js-indicators-macd-js)
-- [./static/js/strategies/myriadLabs.js](#file---static-js-strategies-myriadLabs-js)
-- [./t.md](#file---t-md)
+- [./static/js/modules/chartControls.js](#file---static-js-modules-chartControls-js)
+- [./static/js/modules/chat.js](#file---static-js-modules-chat-js)
+- [./static/js/modules/indicators.js](#file---static-js-modules-indicators-js)
+- [./static/js/modules/sidebar.js](#file---static-js-modules-sidebar-js)
+- [./static/js/modules/strategies.js](#file---static-js-modules-strategies-js)
+- [./static/js/modules/theme.js](#file---static-js-modules-theme-js)
+- [./static/js/modules/watchlist.js](#file---static-js-modules-watchlist-js)
 - [./templates/index.html](#file---templates-index-html)
 
 ## File: ./Stories/add_indicators_button_feature.md {#file---Stories-add-indicators-button-feature-md}
@@ -134,7 +141,69 @@ To make this feature better and complete, we need to focus on the following step
 By completing these steps, we will transform the current UI-focused feature into a fully functional and integrated part of the trading platform, significantly enhancing its analytical capabilities.
 ```
 
-## File: ./ai_client.py {#file---ai-client-py}
+## File: ./config/settings.py {#file---config-settings-py}
+
+```python
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Flask settings
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
+
+# API keys
+OANDA_API_KEY = os.getenv('OANDA_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+# Other settings
+CANDLESTICK_DATA_COUNT = 1000
+DEFAULT_SYMBOL = 'EUR_USD'
+DEFAULT_TIMEFRAME = 'H1'
+```
+
+## File: ./main.py {#file---main-py}
+
+```python
+import os
+from flask import Flask
+from dotenv import load_dotenv
+import logging
+from src.routes.main_routes import main_bp
+from src.routes.api_routes import api_bp
+
+# Load environment variables
+load_dotenv()
+
+def create_app():
+    app = Flask(__name__, static_folder='static', template_folder='templates')
+
+    # Initialize logging
+    logging.basicConfig(level=logging.INFO)
+
+    # Register blueprints
+    app.register_blueprint(main_bp)
+    app.register_blueprint(api_bp, url_prefix='/api')
+
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True)```
+
+## File: ./requirements.txt {#file---requirements-txt}
+
+```plaintext
+Flask==2.3.2
+Werkzeug==2.3.6
+pandas==1.3.3
+requests==2.26.0
+python-dotenv==0.19.0
+openai==0.27.0```
+
+## File: ./src/ai/ai_client.py {#file---src-ai-ai-client-py}
 
 ```python
 import openai
@@ -143,50 +212,50 @@ import logging
 logger = logging.getLogger(__name__)
 
 class AIClient:
-   def __init__(self, api_key):
-       openai.api_key = api_key
-       self.system_prompt = (
-           "You are an AI assistant specializing in forex trading analysis and strategy.\n"
-           "Provide concise, informative responses to trading-related queries.\n"
-           "Offer insights on market trends, technical analysis, and risk management,\n"
-           "but avoid giving specific financial advice. Always remind users to do their own research\n"
-           "and consult with licensed financial advisors for personalized advice.\n"
-           "When provided with chart context, use this information to give more accurate and relevant responses.\n"
-           "Consider the current symbol, timeframe, price, and active indicators when formulating your answers."
-       )
+    def __init__(self, api_key):
+        openai.api_key = api_key
+        self.system_prompt = (
+            "You are an AI assistant specializing in forex trading analysis and strategy.\n"
+            "Provide concise, informative responses to trading-related queries.\n"
+            "Offer insights on market trends, technical analysis, and risk management,\n"
+            "but avoid giving specific financial advice. Always remind users to do their own research\n"
+            "and consult with licensed financial advisors for personalized advice.\n"
+            "When provided with chart context, use this information to give more accurate and relevant responses.\n"
+            "Consider the current symbol, timeframe, price, and active indicators when formulating your answers."
+        )
 
-   def generate_response(self, prompt, chart_context=None):
-       try:
-           messages = [
-               {"role": "system", "content": self.system_prompt}
-           ]
-           if chart_context:
-               context_message = (
-                   f"Chart Context:\n"
-                   f"Symbol: {chart_context.get('symbol', 'N/A')}\n"
-                   f"Timeframe: {chart_context.get('timeframe', 'N/A')}\n"
-                   f"Price: {chart_context.get('price', 'N/A')}\n"
-                   f"Indicators: {', '.join(chart_context.get('indicators', [])) if chart_context.get('indicators') else 'None'}"
-               )
-               messages.append({"role": "user", "content": context_message})
-           messages.append({"role": "user", "content": prompt})
+    def generate_response(self, prompt, chart_context=None):
+        try:
+            messages = [
+                {"role": "system", "content": self.system_prompt}
+            ]
+            if chart_context:
+                context_message = (
+                    f"Chart Context:\n"
+                    f"Symbol: {chart_context.get('symbol', 'N/A')}\n"
+                    f"Timeframe: {chart_context.get('timeframe', 'N/A')}\n"
+                    f"Price: {chart_context.get('price', 'N/A')}\n"
+                    f"Indicators: {', '.join(chart_context.get('indicators', [])) if chart_context.get('indicators') else 'None'}"
+                )
+                messages.append({"role": "user", "content": context_message})
+            messages.append({"role": "user", "content": prompt})
 
-           response = openai.ChatCompletion.create(
-               model="gpt-3.5-turbo",
-               messages=messages,
-               max_tokens=150,
-               n=1,
-               stop=None,
-               temperature=0.7,
-           )
-           message = response.choices[0].message['content'].strip()
-           logger.info(f"AI response generated successfully")
-           return message
-       except Exception as e:
-           logger.error(f"Error generating AI response: {str(e)}")
-           raise Exception(f"Error generating AI response: {str(e)}")```
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                max_tokens=150,
+                n=1,
+                stop=None,
+                temperature=0.7,
+            )
+            message = response.choices[0].message['content'].strip()
+            logger.info(f"AI response generated successfully")
+            return message
+        except Exception as e:
+            logger.error(f"Error generating AI response: {str(e)}")
+            raise Exception(f"Error generating AI response: {str(e)}")```
 
-## File: ./data_fetcher.py {#file---data-fetcher-py}
+## File: ./src/data/data_fetcher.py {#file---src-data-data-fetcher-py}
 
 ```python
 import requests
@@ -199,132 +268,123 @@ import time
 logger = logging.getLogger(__name__)
 
 class OandaDataFetcher:
-   def __init__(self, api_key):
-       self.base_url = "https://api-fxtrade.oanda.com/v3"
-       self.api_key = api_key
-       if not self.api_key:
-           raise ValueError("OANDA API key is not provided. Please provide a valid API key.")
-       self.headers = {
-           "Authorization": f"Bearer {self.api_key}",
-           "Content-Type": "application/json"
-       }
-       self.cache = {}
-       self.cache_lock = threading.Lock()
-       self.instruments = self._fetch_instruments()
-       logger.info("OandaDataFetcher initialized.")
+    def __init__(self, api_key):
+        self.base_url = "https://api-fxtrade.oanda.com/v3"
+        self.api_key = api_key
+        if not self.api_key:
+            raise ValueError("OANDA API key is not provided. Please provide a valid API key.")
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        self.cache = {}
+        self.cache_lock = threading.Lock()
+        self.instruments = self._fetch_instruments()
+        logger.info("OandaDataFetcher initialized.")
 
-   def _fetch_instruments(self):
-       endpoint = f"{self.base_url}/accounts"
-       response = requests.get(endpoint, headers=self.headers)
-       response.raise_for_status()
-       account_id = response.json()['accounts'][0]['id']
-      
-       endpoint = f"{self.base_url}/accounts/{account_id}/instruments"
-       response = requests.get(endpoint, headers=self.headers)
-       response.raise_for_status()
-       return {inst['name']: inst for inst in response.json()['instruments']}
+    def _fetch_instruments(self):
+        endpoint = f"{self.base_url}/accounts"
+        response = requests.get(endpoint, headers=self.headers)
+        response.raise_for_status()
+        account_id = response.json()['accounts'][0]['id']
+        
+        endpoint = f"{self.base_url}/accounts/{account_id}/instruments"
+        response = requests.get(endpoint, headers=self.headers)
+        response.raise_for_status()
+        return {inst['name']: inst for inst in response.json()['instruments']}
 
-   def fetch_candlestick_data(self, instrument, granularity, count=1000):
-       cache_key = f"{instrument}_{granularity}_{count}"
-       with self.cache_lock:
-           if cache_key in self.cache:
-               logger.info(f"Returning cached data for {cache_key}")
-               return self.cache[cache_key]
+    def fetch_candlestick_data(self, instrument, granularity, count=1000):
+        cache_key = f"{instrument}_{granularity}_{count}"
+        with self.cache_lock:
+            if cache_key in self.cache:
+                logger.info(f"Returning cached data for {cache_key}")
+                return self.cache[cache_key]
 
-       endpoint = f"{self.base_url}/instruments/{instrument}/candles"
-       params = {
-           "count": count,
-           "granularity": granularity,
-           "price": "M"
-       }
-       try:
-           logger.info(f"Fetching candlestick data for {instrument} with granularity {granularity}")
-           response = requests.get(endpoint, headers=self.headers, params=params, timeout=10)
-           response.raise_for_status()
-           data = response.json()
-           candles = data['candles']
-           df = pd.DataFrame(candles)
-           df['time'] = pd.to_datetime(df['time'])
-           df['open'] = df['mid'].apply(lambda x: float(x['o']))
-           df['high'] = df['mid'].apply(lambda x: float(x['h']))
-           df['low'] = df['mid'].apply(lambda x: float(x['l']))
-           df['close'] = df['mid'].apply(lambda x: float(x['c']))
-           df = df[['time', 'open', 'high', 'low', 'close', 'volume']]
-           result = df.to_dict(orient='records')
+        endpoint = f"{self.base_url}/instruments/{instrument}/candles"
+        params = {
+            "count": count,
+            "granularity": granularity,
+            "price": "M"
+        }
+        try:
+            logger.info(f"Fetching candlestick data for {instrument} with granularity {granularity}")
+            response = requests.get(endpoint, headers=self.headers, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            candles = data['candles']
+            df = pd.DataFrame(candles)
+            df['time'] = pd.to_datetime(df['time'])
+            df['open'] = df['mid'].apply(lambda x: float(x['o']))
+            df['high'] = df['mid'].apply(lambda x: float(x['h']))
+            df['low'] = df['mid'].apply(lambda x: float(x['l']))
+            df['close'] = df['mid'].apply(lambda x: float(x['c']))
+            df = df[['time', 'open', 'high', 'low', 'close', 'volume']]
+            result = df.to_dict(orient='records')
 
-           with self.cache_lock:
-               self.cache[cache_key] = result
+            with self.cache_lock:
+                self.cache[cache_key] = result
 
-           logger.info(f"Successfully processed {len(df)} candlesticks")
-           return result
-       except requests.exceptions.HTTPError as e:
-           logger.error(f"HTTP Error: {e}")
-           logger.error(f"Response: {e.response.text}")
-           if e.response.status_code == 401:
-               raise ValueError("Invalid OANDA API key. Please check your credentials.")
-           else:
-               raise
-       except Exception as e:
-           logger.error(f"An error occurred: {e}")
-           logger.error(f"Stack trace: {traceback.format_exc()}")
-           raise
+            logger.info(f"Successfully processed {len(df)} candlesticks")
+            return result
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP Error: {e}")
+            logger.error(f"Response: {e.response.text}")
+            if e.response.status_code == 401:
+                raise ValueError("Invalid OANDA API key. Please check your credentials.")
+            else:
+                raise
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+            logger.error(f"Stack trace: {traceback.format_exc()}")
+            raise
 
-   def fetch_price_data(self, instrument):
-       endpoint = f"{self.base_url}/instruments/{instrument}/candles"
-       params = {
-           "count": 2,
-           "granularity": "M1",
-           "price": "M"
-       }
-       try:
-           logger.info(f"Fetching price data for {instrument}")
-           response = requests.get(endpoint, headers=self.headers, params=params, timeout=5)
-           response.raise_for_status()
-           data = response.json()
-           candles = data['candles']
-           if len(candles) < 2:
-               raise Exception("Not enough data to calculate price change.")
-           latest = candles[-1]['mid']
-           previous = candles[-2]['mid']
-           latest_close = float(latest['c'])
-           previous_close = float(previous['c'])
-           price_change = ((latest_close - previous_close) / previous_close) * 100
-           return {'price': latest_close, 'change': price_change}
-       except Exception as e:
-           logger.error(f"Error fetching price data: {e}")
-           raise
+    def fetch_price_data(self, instrument):
+        endpoint = f"{self.base_url}/instruments/{instrument}/candles"
+        params = {
+            "count": 2,
+            "granularity": "M1",
+            "price": "M"
+        }
+        try:
+            logger.info(f"Fetching price data for {instrument}")
+            response = requests.get(endpoint, headers=self.headers, params=params, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            candles = data['candles']
+            if len(candles) < 2:
+                raise Exception("Not enough data to calculate price change.")
+            latest = candles[-1]['mid']
+            previous = candles[-2]['mid']
+            latest_close = float(latest['c'])
+            previous_close = float(previous['c'])
+            price_change = ((latest_close - previous_close) / previous_close) * 100
+            return {'price': latest_close, 'change': price_change}
+        except Exception as e:
+            logger.error(f"Error fetching price data: {e}")
+            raise
 
-   def search_instruments(self, query, category='all'):
-       results = []
-       for name, instrument in self.instruments.items():
-           if query in name:
-               if category == 'all' or category.lower() in instrument['type'].lower():
-                   results.append(name)
-       return results
+    def search_instruments(self, query, category='all'):
+        results = []
+        for name, instrument in self.instruments.items():
+            if query in name:
+                if category == 'all' or category.lower() in instrument['type'].lower():
+                    results.append(name)
+        return results
 
-   def clear_cache(self):
-       with self.cache_lock:
-           self.cache.clear()```
+    def clear_cache(self):
+        with self.cache_lock:
+            self.cache.clear()```
 
-## File: ./main.py {#file---main-py}
+## File: ./src/routes/api_routes.py {#file---src-routes-api-routes-py}
 
 ```python
+from flask import Blueprint, request, jsonify
 import os
-from flask import Flask, render_template, request, jsonify
-from data_fetcher import OandaDataFetcher
-from ai_client import AIClient
-from dotenv import load_dotenv
-import logging
 import json
+from src.data.data_fetcher import OandaDataFetcher
+from src.ai.ai_client import AIClient
 
-# Load environment variables
-load_dotenv()
-
-app = Flask(__name__)
-
-# Initialize logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+api_bp = Blueprint('api', __name__)
 
 # Initialize OandaDataFetcher with API key
 OANDA_API_KEY = os.getenv('OANDA_API_KEY')
@@ -338,11 +398,7 @@ if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set in environment variables.")
 ai_client = AIClient(api_key=OPENAI_API_KEY)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/api/candlestick_data')
+@api_bp.route('/candlestick_data')
 def candlestick_data():
     symbol = request.args.get('symbol', 'EUR_USD')
     timeframe = request.args.get('timeframe', 'H1')
@@ -351,20 +407,18 @@ def candlestick_data():
         data = data_fetcher.fetch_candlestick_data(instrument=symbol, granularity=timeframe, count=count)
         return jsonify(data)
     except Exception as e:
-        logger.error(f"Error fetching candlestick data: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/price_data')
+@api_bp.route('/price_data')
 def price_data():
     symbol = request.args.get('symbol', 'EUR_USD')
     try:
         data = data_fetcher.fetch_price_data(symbol)
         return jsonify(data)
     except Exception as e:
-        logger.error(f"Error fetching price data: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/search_instruments')
+@api_bp.route('/search_instruments')
 def search_instruments():
     query = request.args.get('query', '').upper()
     category = request.args.get('category', 'all')
@@ -372,10 +426,9 @@ def search_instruments():
         instruments = data_fetcher.search_instruments(query, category)
         return jsonify(instruments)
     except Exception as e:
-        logger.error(f"Error searching instruments: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/ai_chat', methods=['POST'])
+@api_bp.route('/ai_chat', methods=['POST'])
 def ai_chat():
     data = request.get_json()
     user_input = data.get('message', '')
@@ -386,17 +439,16 @@ def ai_chat():
         ai_response = ai_client.generate_response(prompt=user_input, chart_context=chart_context)
         return jsonify({'response': ai_response})
     except Exception as e:
-        logger.error(f"Error generating AI response: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/indicators')
+@api_bp.route('/indicators')
 def get_indicators():
     # Load indicators from a JSON file
     with open('indicators.json', 'r') as f:
         indicators = json.load(f)
     return jsonify(indicators)
 
-@app.route('/api/indicators/favorite', methods=['POST'])
+@api_bp.route('/indicators/favorite', methods=['POST'])
 def favorite_indicator():
     data = request.get_json()
     indicator_id = data.get('id')
@@ -417,19 +469,18 @@ def favorite_indicator():
         json.dump(indicators, f)
     
     return jsonify({'success': True})
+```
 
-if __name__ == '__main__':
-    app.run(debug=True)```
+## File: ./src/routes/main_routes.py {#file---src-routes-main-routes-py}
 
-## File: ./requirements.txt {#file---requirements-txt}
+```python
+from flask import Blueprint, render_template
 
-```plaintext
-Flask==2.3.2
-Werkzeug==2.3.6
-pandas==1.3.3
-requests==2.26.0
-python-dotenv==0.19.0
-openai==0.27.0```
+main_bp = Blueprint('main', __name__)
+
+@main_bp.route('/')
+def index():
+    return render_template('index.html')```
 
 ## File: ./static/css/ai-chat.css {#file---static-css-ai-chat-css}
 
@@ -509,7 +560,8 @@ openai==0.27.0```
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: 5px;
-}```
+}
+```
 
 ## File: ./static/css/chart.css {#file---static-css-chart-css}
 
@@ -598,7 +650,8 @@ openai==0.27.0```
 
 #indicators-button i, #strategies-dropdown-btn i {
     font-size: 16px;
-}```
+}
+```
 
 ## File: ./static/css/components.css {#file---static-css-components-css}
 
@@ -638,7 +691,8 @@ openai==0.27.0```
 
 .show {
     display: block;
-}```
+}
+```
 
 ## File: ./static/css/layout.css {#file---static-css-layout-css}
 
@@ -663,7 +717,8 @@ main {
     background-color: var(--panel-bg);
     border-left: 1px solid var(--border-color);
     transition: width 0.3s ease;
-}```
+}
+```
 
 ## File: ./static/css/main.css {#file---static-css-main-css}
 
@@ -692,12 +747,12 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-}```
+}
+```
 
 ## File: ./static/css/modal.css {#file---static-css-modal-css}
 
 ```css
-/* ###### Modal Styles ###### */
 .modal {
     display: none;
     position: fixed;
@@ -742,7 +797,6 @@ body {
     cursor: pointer;
 }
 
-/* ###### Indicator Modal Styles ###### */
 #indicator-search {
     width: 100%;
     padding: 10px;
@@ -809,12 +863,12 @@ body {
 
 .favorite-btn.active {
     color: gold;
-}```
+}
+```
 
 ## File: ./static/css/responsive.css {#file---static-css-responsive-css}
 
 ```css
-/* ###### Responsive Styles ###### */
 @media (max-width: 768px) {
     main {
         flex-direction: column;
@@ -915,7 +969,8 @@ body {
         width: 100%;
         margin-bottom: 5px;
     }
-}```
+}
+```
 
 ## File: ./static/css/sidebar.css {#file---static-css-sidebar-css}
 
@@ -1004,886 +1059,8 @@ body {
 
 .show {
     display: block !important;
-}```
-
-## File: ./static/css/styles.css {#file---static-css-styles-css}
-
-```css
-:root {
-   --bg-color: #131722;
-   --text-color: #d1d4dc;
-   --border-color: #2a2e39;
-   --panel-bg: #1e222d;
-   --button-bg: #2962ff;
-   --button-text: white;
-   --chart-bg: #131722;
-   --hover-color: #364156;
-   --ai-chat-bg: #1a1e2e;
-   --modal-bg: #1e222d;
 }
-
-.light-theme {
-   --bg-color: #ffffff;
-   --text-color: #131722;
-   --border-color: #e0e3eb;
-   --panel-bg: #f0f3fa;
-   --button-bg: #2962ff;
-   --button-text: white;
-   --chart-bg: #ffffff;
-   --hover-color: #e6e9f0;
-   --ai-chat-bg: #f5f5f5;
-   --modal-bg: #f0f3fa;
-}
-
-body {
-   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-   margin: 0;
-   padding: 0;
-   background-color: var(--bg-color);
-   color: var(--text-color);
-   transition: background-color 0.3s, color 0.3s;
-}
-
-#app {
-   display: flex;
-   flex-direction: column;
-   height: 100vh;
-}
-
-header {
-   background-color: var(--panel-bg);
-   padding: 10px 20px;
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-main {
-   display: flex;
-   flex: 1;
-   overflow: hidden;
-}
-
-#sidebar {
-   width: 250px;
-   background-color: var(--panel-bg);
-   transition: width 0.3s ease;
-   overflow-y: auto;
-}
-
-#sidebar.collapsed {
-   width: 50px;
-}
-
-.tool-category {
-   padding: 10px;
-}
-
-.tool-grid {
-   display: grid;
-   grid-template-columns: repeat(4, 1fr);
-   gap: 5px;
-}
-
-.tool-button {
-   background-color: var(--button-bg);
-   color: var(--button-text);
-   border: none;
-   padding: 10px;
-   cursor: pointer;
-   transition: background-color 0.2s;
-}
-
-.tool-button:hover {
-   background-color: var(--hover-color);
-}
-
-#chart-container {
-   flex: 1;
-   padding: 20px;
-   background-color: var(--chart-bg);
-}
-
-#timeframe-selector {
-   display: flex;
-   overflow-x: auto;
-   margin-bottom: 10px;
-   align-items: center;
-}
-
-.timeframe-btn {
-   background-color: var(--panel-bg);
-   color: var(--text-color);
-   border: 1px solid var(--border-color);
-   padding: 5px 10px;
-   margin-right: 5px;
-   cursor: pointer;
-   transition: background-color 0.2s;
-   white-space: nowrap;
-}
-
-.timeframe-btn[selected], .timeframe-btn:hover {
-   background-color: var(--button-bg);
-   color: var(--button-text);
-}
-
-#indicators-button {
-   display: flex;
-   align-items: center;
-   gap: 5px;
-}
-
-#candlestick-chart {
-   height: calc(100% - 50px);
-   width: 100%;
-}
-
-.panel {
-   width: 300px;
-   background-color: var(--panel-bg);
-   border-left: 1px solid var(--border-color);
-   transition: width 0.3s ease;
-}
-
-#watchlist-panel {
-   display: flex;
-   flex-direction: column;
-}
-
-#watchlist-panel h3 {
-   padding: 10px;
-   margin: 0;
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-}
-
-#watchlist-search-container {
-   position: relative;
-   margin: 10px;
-}
-
-#watchlist-search {
-   width: 100%;
-   padding: 5px;
-   background-color: var(--bg-color);
-   color: var(--text-color);
-   border: 1px solid var(--border-color);
-}
-
-#instrument-category-dropdown {
-   position: relative;
-   display: inline-block;
-   width: 100%;
-   margin-top: 5px;
-}
-
-#instrument-category-button {
-   width: 100%;
-   padding: 5px;
-   background-color: var(--panel-bg);
-   color: var(--text-color);
-   border: 1px solid var(--border-color);
-   cursor: pointer;
-}
-
-#instrument-category-content {
-   display: none;
-   position: absolute;
-   background-color: var(--panel-bg);
-   min-width: 160px;
-   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-   z-index: 1;
-   width: 100%;
-}
-
-#instrument-category-content a {
-   color: var(--text-color);
-   padding: 12px 16px;
-   text-decoration: none;
-   display: block;
-}
-
-#instrument-category-content a:hover {
-   background-color: var(--hover-color);
-}
-
-.show {
-   display: block !important;
-}
-
-#search-results {
-   position: absolute;
-   top: 100%;
-   left: 0;
-   right: 0;
-   background-color: var(--panel-bg);
-   border: 1px solid var(--border-color);
-   border-top: none;
-   max-height: 200px;
-   overflow-y: auto;
-   z-index: 1000;
-}
-
-.search-result-item {
-   padding: 5px 10px;
-   cursor: pointer;
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-}
-
-.search-result-item:hover {
-   background-color: var(--hover-color);
-}
-
-.search-result-item .add-btn {
-   background: none;
-   border: none;
-   color: var(--text-color);
-   cursor: pointer;
-   font-size: 1.2em;
-   padding: 0 5px;
-}
-
-#watchlist-container {
-   flex: 1;
-   overflow-y: auto;
-   padding: 10px;
-}
-
-.watchlist-item {
-   padding: 5px 0;
-   border-bottom: 1px solid var(--border-color);
-   cursor: pointer;
-   transition: background-color 0.2s;
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-}
-
-.watchlist-item:hover {
-   background-color: var(--hover-color);
-}
-
-.watchlist-item .remove-btn {
-   background: none;
-   border: none;
-   color: var(--text-color);
-   cursor: pointer;
-   font-size: 1.2em;
-   padding: 0 5px;
-}
-
-#ai-chat-icon {
-   position: fixed;
-   bottom: 20px;
-   right: 20px;
-   background-color: var(--button-bg);
-   color: var(--button-text);
-   width: 50px;
-   height: 50px;
-   border-radius: 50%;
-   display: flex;
-   justify-content: center;
-   align-items: center;
-   cursor: pointer;
-   transition: transform 0.2s;
-}
-
-#ai-chat-icon:hover {
-   transform: scale(1.1);
-}
-
-#ai-chat-panel {
-   position: fixed;
-   right: -300px;
-   bottom: 80px;
-   width: 300px;
-   height: 400px;
-   transition: right 0.3s, height 0.3s;
-   display: flex;
-   flex-direction: column;
-   background-color: var(--ai-chat-bg);
-   border: 1px solid var(--border-color);
-   border-radius: 10px;
-   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-#ai-chat-panel.open {
-   right: 20px;
-}
-
-#ai-chat-panel.maximized {
-   height: calc(100% - 100px);
-}
-
-#ai-chat-header {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   padding: 10px;
-   border-bottom: 1px solid var(--border-color);
-   background-color: var(--panel-bg);
-   border-radius: 10px 10px 0 0;
-}
-
-#chat-messages {
-   flex: 1;
-   overflow-y: auto;
-   padding: 10px;
-}
-
-#chat-input-container {
-   display: flex;
-   padding: 10px;
-   border-top: 1px solid var(--border-color);
-   background-color: var(--panel-bg);
-   border-radius: 0 0 10px 10px;
-}
-
-#user-input {
-   flex: 1;
-   margin-right: 5px;
-   padding: 5px;
-   background-color: var(--bg-color);
-   color: var(--text-color);
-   border: 1px solid var(--border-color);
-   border-radius: 5px;
-}
-
-.icon-button {
-   background: none;
-   border: none;
-   color: var(--text-color);
-   cursor: pointer;
-   padding: 5px;
-   transition: color 0.2s;
-}
-
-.icon-button:hover {
-   color: var(--button-bg);
-}
-
-#theme-toggle {
-   display: flex;
-   align-items: center;
-}
-
-.switch {
-   position: relative;
-   display: inline-block;
-   width: 60px;
-   height: 34px;
-   background-color: var(--panel-bg);
-   border-radius: 34px;
-   cursor: pointer;
-}
-
-.switch input {
-   opacity: 0;
-   width: 0;
-   height: 0;
-}
-
-.switch i {
-   position: absolute;
-   top: 7px;
-   transition: .4s;
-}
-
-.switch .fa-sun {
-   left: 7px;
-   color: #f39c12;
-   opacity: 0;
-}
-
-.switch .fa-moon {
-   right: 7px;
-   color: #f1c40f;
-}
-
-input:checked + .switch .fa-sun {
-   opacity: 1;
-}
-
-input:checked + .switch .fa-moon {
-   opacity: 0;
-}
-
-.switch::before {
-   content: "";
-   position: absolute;
-   height: 26px;
-   width: 26px;
-   left: 4px;
-   bottom: 4px;
-   background-color: var(--button-bg);
-   transition: .4s;
-   border-radius: 50%;
-}
-
-input:checked + .switch::before {
-   transform: translateX(26px);
-}
-
-#watchlist-toggle {
-   position: fixed;
-   top: 50%;
-   right: 0;
-   transform: translateY(-50%);
-   background-color: var(--panel-bg);
-   border: 1px solid var(--border-color);
-   border-right: none;
-   border-radius: 5px 0 0 5px;
-   padding: 10px 5px;
-   z-index: 1000;
-   transition: right 0.3s ease;
-}
-
-#watchlist-panel.collapsed + #watchlist-toggle {
-   right: 300px;
-}
-
-#watchlist-panel.collapsed {
-   width: 0;
-}
-
-#chart-context-menu, #watchlist-context-menu {
-   position: absolute;
-   background-color: var(--panel-bg);
-   border: 1px solid var(--border-color);
-   border-radius: 5px;
-   padding: 5px 0;
-   z-index: 1000;
-   display: none;
-}
-
-.context-menu-item {
-   padding: 5px 10px;
-   cursor: pointer;
-}
-
-.context-menu-item:hover {
-   background-color: var(--hover-color);
-}
-
-.modal {
-   display: none;
-   position: fixed;
-   z-index: 1001;
-   left: 0;
-   top: 0;
-   width: 100%;
-   height: 100%;
-   overflow: auto;
-   background-color: rgba(0,0,0,0.4);
-}
-
-.modal-content {
-   background-color: var(--modal-bg);
-   margin: 15% auto;
-   padding: 20px;
-   border: 1px solid var(--border-color);
-   width: 80%;
-   max-width: 600px;
-   border-radius: 5px;
-}
-
-.modal-header {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   margin-bottom: 20px;
-}
-
-.close {
-   color: var(--text-color);
-   float: right;
-   font-size: 28px;
-   font-weight: bold;
-   cursor: pointer;
-}
-
-.close:hover,
-.close:focus {
-   color: var(--button-bg);
-   text-decoration: none;
-   cursor: pointer;
-}
-
-#indicator-search {
-   width: 100%;
-   padding: 10px;
-   margin-bottom: 20px;
-   border: 1px solid var(--border-color);
-   background-color: var(--bg-color);
-   color: var(--text-color);
-}
-
-#indicator-categories {
-   display: flex;
-   justify-content: space-between;
-   margin-bottom: 20px;
-}
-
-.category-btn {
-   background-color: var(--panel-bg);
-   color: var(--text-color);
-   border: 1px solid var(--border-color);
-   padding: 5px 10px;
-   cursor: pointer;
-   transition: background-color 0.2s;
-}
-
-.category-btn.active {
-   background-color: var(--button-bg);
-   color: var(--button-text);
-}
-
-#indicators-list {
-   max-height: 300px;
-   overflow-y: auto;
-}
-
-.indicator-item {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   padding: 10px;
-   border-bottom: 1px solid var(--border-color);
-}
-
-.indicator-item:hover {
-   background-color: var(--hover-color);
-}
-
-.add-indicator-btn {
-   background-color: var(--button-bg);
-   color: var(--button-text);
-   border: none;
-   padding: 5px 10px;
-   cursor: pointer;
-   transition: background-color 0.2s;
-}
-
-.add-indicator-btn:hover {
-   background-color: var(--hover-color);
-}
-
-@media (max-width: 768px) {
-   main {
-       flex-direction: column;
-   }
-
-   #sidebar, .panel {
-       width: 100%;
-       height: auto;
-   }
-
-   #sidebar.collapsed {
-      height: 50px;
-  }
-
-  #ai-chat-panel {
-      width: 100%;
-      right: -100%;
-  }
-
-  #ai-chat-panel.open {
-      right: 0;
-  }
-
-  .modal-content {
-      width: 95%;
-      margin: 5% auto;
-  }
-
-  #indicator-categories {
-      flex-wrap: wrap;
-  }
-
-  .category-btn {
-      margin-bottom: 5px;
-  }
-}
-
-.indicator-item {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   padding: 10px;
-   border-bottom: 1px solid var(--border-color);
-}
-
-.indicator-item:hover {
-   background-color: var(--hover-color);
-}
-
-.add-indicator-btn, .favorite-btn {
-   background-color: var(--button-bg);
-   color: var(--button-text);
-   border: none;
-   padding: 5px 10px;
-   cursor: pointer;
-   transition: background-color 0.2s;
-}
-
-.add-indicator-btn:hover, .favorite-btn:hover {
-   background-color: var(--hover-color);
-}
-
-.favorite-btn {
-   background-color: transparent;
-   color: var(--text-color);
-}
-
-.favorite-btn.active {
-   color: gold;
-}
-
-#ai-chat-icon {
-   position: fixed;
-   bottom: 20px;
-   right: 20px;
-   background-color: var(--button-bg);
-   color: var(--button-text);
-   width: 50px;
-   height: 50px;
-   border-radius: 50%;
-   display: flex;
-   justify-content: center;
-   align-items: center;
-   cursor: pointer;
-   transition: transform 0.2s;
-}
-
-#ai-chat-icon:hover {
-   transform: scale(1.1);
-}
-
-#ai-chat-panel {
-   position: fixed;
-   right: -300px;
-   bottom: 80px;
-   width: 300px;
-   height: 400px;
-   transition: right 0.3s, height 0.3s;
-   display: flex;
-   flex-direction: column;
-   background-color: var(--ai-chat-bg);
-   border: 1px solid var(--border-color);
-   border-radius: 10px;
-   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-#ai-chat-panel.open {
-   right: 20px;
-}
-
-#ai-chat-panel.maximized {
-   height: calc(100% - 100px);
-}
-
-#ai-chat-header {
-   display: flex;
-   justify-content: space-between;
-   align-items: center;
-   padding: 10px;
-   border-bottom: 1px solid var(--border-color);
-   background-color: var(--panel-bg);
-   border-radius: 10px 10px 0 0;
-}
-
-#chat-messages {
-   flex: 1;
-   overflow-y: auto;
-   padding: 10px;
-}
-
-#chat-input-container {
-   display: flex;
-   padding: 10px;
-   border-top: 1px solid var(--border-color);
-   background-color: var(--panel-bg);
-   border-radius: 0 0 10px 10px;
-}
-
-#user-input {
-   flex: 1;
-   margin-right: 5px;
-   padding: 5px;
-   background-color: var(--bg-color);
-   color: var(--text-color);
-   border: 1px solid var(--border-color);
-   border-radius: 5px;
-}
-
-.icon-button {
-   background: none;
-   border: none;
-   color: var(--text-color);
-   cursor: pointer;
-   padding: 5px;
-   transition: color 0.2s;
-}
-
-.icon-button:hover {
-   color: var(--button-bg);
-}
-
-#theme-toggle {
-   display: flex;
-   align-items: center;
-}
-
-.switch {
-   position: relative;
-   display: inline-block;
-   width: 60px;
-   height: 34px;
-   background-color: var(--panel-bg);
-   border-radius: 34px;
-   cursor: pointer;
-}
-
-.switch input {
-   opacity: 0;
-   width: 0;
-   height: 0;
-}
-
-.switch i {
-   position: absolute;
-   top: 7px;
-   transition: .4s;
-}
-
-.switch .fa-sun {
-   left: 7px;
-   color: #f39c12;
-   opacity: 0;
-}
-
-.switch .fa-moon {
-   right: 7px;
-   color: #f1c40f;
-}
-
-input:checked + .switch .fa-sun {
-   opacity: 1;
-}
-
-input:checked + .switch .fa-moon {
-   opacity: 0;
-}
-
-.switch::before {
-   content: "";
-   position: absolute;
-   height: 26px;
-   width: 26px;
-   left: 4px;
-   bottom: 4px;
-   background-color: var(--button-bg);
-   transition: .4s;
-   border-radius: 50%;
-}
-
-input:checked + .switch::before {
-   transform: translateX(26px);
-}
-
-#watchlist-toggle {
-   position: fixed;
-   top: 50%;
-   right: 0;
-   transform: translateY(-50%);
-   background-color: var(--panel-bg);
-   border: 1px solid var(--border-color);
-   border-right: none;
-   border-radius: 5px 0 0 5px;
-   padding: 10px 5px;
-   z-index: 1000;
-   transition: right 0.3s ease;
-}
-
-#watchlist-panel.collapsed + #watchlist-toggle {
-   right: 300px;
-}
-
-#watchlist-panel.collapsed {
-   width: 0;
-}
-
-#chart-context-menu, #watchlist-context-menu {
-   position: absolute;
-   background-color: var(--panel-bg);
-   border: 1px solid var(--border-color);
-   border-radius: 5px;
-   padding: 5px 0;
-   z-index: 1000;
-   display: none;
-}
-
-.context-menu-item {
-   padding: 5px 10px;
-   cursor: pointer;
-}
-
-.context-menu-item:hover {
-   background-color: var(--hover-color);
-}
-
-#strategies-dropdown {
-    display: none;
-    position: absolute;
-    background-color: var(--panel-bg);
-    min-width: 160px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    z-index: 1;
-}
-
-#strategies-dropdown button {
-    color: var(--text-color);
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-    width: 100%;
-    text-align: left;
-    border: none;
-    background: none;
-    cursor: pointer;
-}
-
-#strategies-dropdown button:hover {
-    background-color: var(--hover-color);
-}
-
-@media (max-width: 768px) {
-   main {
-       flex-direction: column;
-   }
-
-   #sidebar, .panel {
-       width: 100%;
-       height: auto;
-   }
-
-   #sidebar.collapsed {
-       height: 50px;
-   }
-
-   #ai-chat-panel {
-       width: 100%;
-       right: -100%;
-   }
-
-   #ai-chat-panel.open {
-       right: 0;
-   }
-}```
+```
 
 ## File: ./static/css/variables.css {#file---static-css-variables-css}
 
@@ -1912,7 +1089,8 @@ input:checked + .switch::before {
     --hover-color: #e6e9f0;
     --ai-chat-bg: #f5f5f5;
     --modal-bg: #f0f3fa;
-}```
+}
+```
 
 ## File: ./static/css/watchlist.css {#file---static-css-watchlist-css}
 
@@ -2077,107 +1255,75 @@ input:checked + .switch::before {
     padding: 5px 0;
     z-index: 1000;
     display: none;
-}```
+}
+```
 
 ## File: ./static/js/app.js {#file---static-js-app-js}
 
 ```javascript
-let watchlist = JSON.parse(localStorage.getItem('watchlist')) || ['EUR_USD', 'GBP_USD'];
-let currentSymbol = 'EUR_USD';
-let currentTimeframe = 'H1';
-let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence'];
-let activeStrategy = null;
+import { initTheme } from './modules/theme.js';
+import { initSidebar } from './modules/sidebar.js';
+import { initWatchlist } from './modules/watchlist.js';
+import { initChat } from './modules/chat.js';
+import { initStrategies } from './modules/strategies.js';
+import { initIndicators } from './modules/indicators.js';
+import { initChartControls } from './modules/chartControls.js';
 
-function toggleTheme() {
-    document.body.classList.toggle('light-theme');
-    localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
-    updateChartTheme();
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    initSidebar();
+    initWatchlist();
+    initChat();
+    initStrategies();
+    initIndicators();
+    initChartControls();
+});
+```
+
+## File: ./static/js/modules/chartControls.js {#file---static-js-modules-chartControls-js}
+
+```javascript
+export function initChartControls() {
+    initializeTimeframeButtons();
+    initializeChartButtons();
 }
 
-function updateChartTheme() {
-    if (typeof chart !== 'undefined' && chart) {
-        chart.applyOptions({
-            layout: {
-                backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart-bg').trim(),
-                textColor: getComputedStyle(document.body).getPropertyValue('--text-color').trim(),
-            }
+function initializeTimeframeButtons() {
+    document.querySelectorAll('.timeframe-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelector('.timeframe-btn[selected]').removeAttribute('selected');
+            e.target.setAttribute('selected', '');
+            window.currentTimeframe = e.target.dataset.timeframe;
+            window.chartFunctions.switchTimeframe(e.target.dataset.timeframe);
         });
-    }
-}
-
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('collapsed');
-    adjustChartSize();
-}
-
-function toggleWatchlist() {
-    const watchlistPanel = document.getElementById('watchlist-panel');
-    watchlistPanel.classList.toggle('collapsed');
-    const toggleButton = document.getElementById('watchlist-toggle');
-    toggleButton.classList.toggle('hidden');
-    adjustChartSize();
-}
-
-function adjustChartSize() {
-    var chartContainer = document.getElementById('chart-container');
-    var sidebar = document.getElementById('sidebar');
-    var watchlistPanel = document.getElementById('watchlist-panel');
-   
-    var sidebarWidth = sidebar.classList.contains('collapsed') ? 50 : 250;
-    var watchlistWidth = watchlistPanel.classList.contains('collapsed') ? 0 : 300;
-   
-    var newWidth = window.innerWidth - sidebarWidth - watchlistWidth;
-    chartContainer.style.width = newWidth + 'px';
-   
-    if (typeof chart !== 'undefined' && chart) {
-        chart.applyOptions({ width: newWidth });
-    }
-}
-
-function addToWatchlist(symbol) {
-    if (!watchlist.includes(symbol)) {
-        watchlist.push(symbol);
-        saveWatchlist();
-        updateWatchlistUI();
-    }
-}
-
-function removeFromWatchlist(symbol) {
-    watchlist = watchlist.filter(s => s !== symbol);
-    saveWatchlist();
-    updateWatchlistUI();
-}
-
-function saveWatchlist() {
-    localStorage.setItem('watchlist', JSON.stringify(watchlist));
-}
-
-function updateWatchlistUI() {
-    const container = document.getElementById('watchlist-container');
-    container.innerHTML = '';
-    watchlist.forEach(symbol => {
-        const item = document.createElement('div');
-        item.className = 'watchlist-item';
-        item.setAttribute('draggable', true);
-        item.dataset.symbol = symbol;
-        item.innerHTML = `
-            <span class="symbol">${symbol}</span>
-            <span class="price">--</span>
-            <span class="change">--</span>
-            <button class="remove-btn">-</button>
-        `;
-        item.querySelector('.remove-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            removeFromWatchlist(symbol);
-        });
-        item.addEventListener('click', () => {
-            currentSymbol = symbol;
-            window.chartFunctions.switchSymbol(symbol);
-        });
-        container.appendChild(item);
     });
-    updateWatchlistData();
+}
+
+function initializeChartButtons() {
+    document.querySelectorAll('.tool-button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const tool = e.target.closest('.tool-button').dataset.tool;
+            window.chartFunctions.setActiveDrawingTool(tool);
+        });
+    });
+}
+
+// You might want to add more functions here to handle other chart controls
+```
+
+## File: ./static/js/modules/chat.js {#file---static-js-modules-chat-js}
+
+```javascript
+export function initChat() {
+    document.getElementById('ai-chat-icon').addEventListener('click', toggleChatPanel);
+    document.getElementById('close-chat').addEventListener('click', toggleChatPanel);
+    document.getElementById('maximize-chat').addEventListener('click', maximizeChatPanel);
+    document.getElementById('send-message').addEventListener('click', sendChatMessage);
+    document.getElementById('user-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendChatMessage();
+        }
+    });
 }
 
 function toggleChatPanel() {
@@ -2202,8 +1348,8 @@ function sendChatMessage() {
             body: JSON.stringify({
                 message: message,
                 chartContext: {
-                    symbol: currentSymbol,
-                    timeframe: currentTimeframe,
+                    symbol: window.currentSymbol,
+                    timeframe: window.currentTimeframe,
                     price: window.chartFunctions.getLastPrice(),
                     indicators: getActiveIndicators()
                 }
@@ -2237,180 +1383,13 @@ function getActiveIndicators() {
     // Implement this function to return active indicators
     return [];
 }
+```
 
-function initializeWatchlist() {
-    const watchlistSearch = document.getElementById('watchlist-search');
-    const categoryButton = document.getElementById('instrument-category-button');
-    const categoryContent = document.getElementById('instrument-category-content');
+## File: ./static/js/modules/indicators.js {#file---static-js-modules-indicators-js}
 
-    watchlistSearch.addEventListener('input', debounce(handleSearch, 300));
-
-    categoryButton.addEventListener('click', () => {
-        categoryContent.classList.toggle('show');
-    });
-
-    document.querySelectorAll('#instrument-category-content a').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            categoryButton.textContent = item.textContent;
-            categoryContent.classList.remove('show');
-            handleSearch();
-        });
-    });
-
-    // Close the dropdown if the user clicks outside of it
-    window.addEventListener('click', (e) => {
-        if (!e.target.matches('#instrument-category-button')) {
-            categoryContent.classList.remove('show');
-        }
-    });
-
-    updateWatchlistUI();
-}
-
-function handleSearch() {
-    const query = document.getElementById('watchlist-search').value.trim();
-    const category = document.getElementById('instrument-category-button').textContent.toLowerCase();
-   
-    if (query.length > 0 || category !== 'all') {
-        searchInstruments(query, category);
-    } else {
-        document.getElementById('search-results').innerHTML = '';
-    }
-}
-
-function searchInstruments(query, category) {
-    fetch(`/api/search_instruments?query=${query}&category=${category}`)
-        .then(response => response.json())
-        .then(data => {
-            updateSearchResults(data);
-        })
-        .catch(error => console.error('Error searching instruments:', error));
-}
-
-function updateSearchResults(results) {
-    const searchResults = document.getElementById('search-results');
-    searchResults.innerHTML = '';
-    results.forEach(instrument => {
-        const item = document.createElement('div');
-        item.className = 'search-result-item';
-        item.innerHTML = `
-            <span class="instrument-name">${instrument}</span>
-            <button class="add-btn">${watchlist.includes(instrument) ? '-' : '+'}</button>
-        `;
-        item.querySelector('.instrument-name').addEventListener('click', () => {
-            window.chartFunctions.switchSymbol(instrument);
-        });
-        item.querySelector('.add-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (watchlist.includes(instrument)) {
-                removeFromWatchlist(instrument);
-            } else {
-                addToWatchlist(instrument);
-            }
-            e.target.textContent = watchlist.includes(instrument) ? '-' : '+';
-        });
-        searchResults.appendChild(item);
-    });
-}
-
-function updateWatchlistData() {
-    watchlist.forEach(symbol => {
-        fetch(`/api/price_data?symbol=${symbol}`)
-            .then(response => response.json())
-            .then(data => {
-                const item = document.querySelector(`.watchlist-item[data-symbol="${symbol}"]`);
-                if (item && data.price) {
-                    item.querySelector('.price').textContent = data.price.toFixed(5);
-                    item.querySelector('.change').textContent = data.change.toFixed(2) + '%';
-                }
-            })
-            .catch(error => console.error('Error fetching price data:', error));
-    });
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-function initializeStrategiesDropdown() {
-    const dropdown = document.getElementById('strategies-dropdown');
-    const dropdownBtn = document.getElementById('strategies-dropdown-btn');
-
-    // Populate dropdown with strategies
-    strategies.forEach(strategy => {
-        const button = document.createElement('button');
-        button.textContent = strategy;
-        button.addEventListener('click', () => selectStrategy(strategy));
-        dropdown.appendChild(button);
-    });
-
-    // Toggle dropdown visibility
-    dropdownBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('show');
-    });
-
-    // Close dropdown when clicking outside
-    window.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-    });
-}
-
-function selectStrategy(strategy) {
-    activeStrategy = strategy;
-    console.log(`Selected strategy: ${strategy}`);
-    // Here you would typically call a function to apply the strategy to the chart
-    applyStrategyToChart(strategy);
-}
-
-function applyStrategyToChart(strategy) {
-    // Remove any existing strategy indicators
-    removeExistingStrategyIndicators();
-
-    switch(strategy) {
-        case 'Moving Average Crossover':
-            addMovingAverageCrossover();
-            break;
-        case 'RSI Overbought/Oversold':
-            addRSIStrategy();
-            break;
-        case 'MACD Divergence':
-            addMACDDivergence();
-            break;
-    }
-}
-
-function removeExistingStrategyIndicators() {
-    // Implement this function to remove existing strategy indicators from the chart
-    console.log('Removing existing strategy indicators');
-}
-
-function addMovingAverageCrossover() {
-    // Implement Moving Average Crossover strategy
-    console.log('Adding Moving Average Crossover strategy');
-    window.chartFunctions.addIndicator('sma', { period: 10, color: 'blue' });
-    window.chartFunctions.addIndicator('sma', { period: 20, color: 'red' });
-}
-
-function addRSIStrategy() {
-    // Implement RSI Overbought/Oversold strategy
-    console.log('Adding RSI Overbought/Oversold strategy');
-    window.chartFunctions.addIndicator('rsi', { period: 14, overbought: 70, oversold: 30 });
-}
-
-function addMACDDivergence() {
-    // Implement MACD Divergence strategy
-    console.log('Adding MACD Divergence strategy');
-    window.chartFunctions.addIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+```javascript
+export function initIndicators() {
+    initializeIndicatorsModal();
 }
 
 function initializeIndicatorsModal() {
@@ -2429,7 +1408,6 @@ function initializeIndicatorsModal() {
         }
     };
 
-    // Populate indicators list
     const indicators = [
         { name: 'Simple Moving Average', category: 'trend' },
         { name: 'Exponential Moving Average', category: 'trend' },
@@ -2489,780 +1467,305 @@ function toggleFavorite(button) {
     button.classList.toggle('active');
     // Implement the logic to save favorite indicators
 }
+```
 
-document.addEventListener('DOMContentLoaded', () => {
+## File: ./static/js/modules/sidebar.js {#file---static-js-modules-sidebar-js}
+
+```javascript
+export function initSidebar() {
+    document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('collapsed');
+    adjustChartSize();
+}
+
+function adjustChartSize() {
+    var chartContainer = document.getElementById('chart-container');
+    var sidebar = document.getElementById('sidebar');
+    var watchlistPanel = document.getElementById('watchlist-panel');
+   
+    var sidebarWidth = sidebar.classList.contains('collapsed') ? 50 : 250;
+    var watchlistWidth = watchlistPanel.classList.contains('collapsed') ? 0 : 300;
+   
+    var newWidth = window.innerWidth - sidebarWidth - watchlistWidth;
+    chartContainer.style.width = newWidth + 'px';
+   
+    if (typeof chart !== 'undefined' && chart) {
+        chart.applyOptions({ width: newWidth });
+    }
+}
+```
+
+## File: ./static/js/modules/strategies.js {#file---static-js-modules-strategies-js}
+
+```javascript
+let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence'];
+let activeStrategy = null;
+
+export function initStrategies() {
+    initializeStrategiesDropdown();
+}
+
+function initializeStrategiesDropdown() {
+    const dropdown = document.getElementById('strategies-dropdown');
+    const dropdownBtn = document.getElementById('strategies-dropdown-btn');
+
+    strategies.forEach(strategy => {
+        const button = document.createElement('button');
+        button.textContent = strategy;
+        button.addEventListener('click', () => selectStrategy(strategy));
+        dropdown.appendChild(button);
+    });
+
+    dropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+    });
+
+    window.addEventListener('click', () => {
+        dropdown.classList.remove('show');
+    });
+}
+
+function selectStrategy(strategy) {
+    activeStrategy = strategy;
+    console.log(`Selected strategy: ${strategy}`);
+    applyStrategyToChart(strategy);
+}
+
+function applyStrategyToChart(strategy) {
+    removeExistingStrategyIndicators();
+
+    switch(strategy) {
+        case 'Moving Average Crossover':
+            addMovingAverageCrossover();
+            break;
+        case 'RSI Overbought/Oversold':
+            addRSIStrategy();
+            break;
+        case 'MACD Divergence':
+            addMACDDivergence();
+            break;
+    }
+}
+
+function removeExistingStrategyIndicators() {
+    console.log('Removing existing strategy indicators');
+}
+
+function addMovingAverageCrossover() {
+    console.log('Adding Moving Average Crossover strategy');
+    window.chartFunctions.addIndicator('sma', { period: 10, color: 'blue' });
+    window.chartFunctions.addIndicator('sma', { period: 20, color: 'red' });
+}
+
+function addRSIStrategy() {
+    console.log('Adding RSI Overbought/Oversold strategy');
+    window.chartFunctions.addIndicator('rsi', { period: 14, overbought: 70, oversold: 30 });
+}
+
+function addMACDDivergence() {
+    console.log('Adding MACD Divergence strategy');
+    window.chartFunctions.addIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+}
+```
+
+## File: ./static/js/modules/theme.js {#file---static-js-modules-theme-js}
+
+```javascript
+export function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
     }
    
     document.getElementById('theme-switch').addEventListener('change', toggleTheme);
-    document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
-    document.getElementById('watchlist-toggle').addEventListener('click', toggleWatchlist);
-    document.getElementById('ai-chat-icon').addEventListener('click', toggleChatPanel);
-    document.getElementById('close-chat').addEventListener('click', toggleChatPanel);
-    document.getElementById('maximize-chat').addEventListener('click', maximizeChatPanel);
-    document.getElementById('send-message').addEventListener('click', sendChatMessage);
-    document.getElementById('user-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendChatMessage();
-        }
-    });
-   
-    initializeWatchlist();
-    initializeStrategiesDropdown();
-    initializeIndicatorsModal();
-   
-    document.querySelectorAll('.timeframe-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelector('.timeframe-btn[selected]').removeAttribute('selected');
-            e.target.setAttribute('selected', '');
-            currentTimeframe = e.target.dataset.timeframe;
-            window.chartFunctions.switchTimeframe(e.target.dataset.timeframe);
-        });
-    });
-
-    document.querySelectorAll('.tool-button').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const tool = e.target.closest('.tool-button').dataset.tool;
-            window.chartFunctions.setActiveDrawingTool(tool);
-        });
-    });
-
-    window.addEventListener('resize', adjustChartSize);
-    adjustChartSize();
-});
-
-setInterval(updateWatchlistData, 60000);
-
-// Export functions to be used by other modules if needed
-window.appFunctions = {
-    toggleTheme,
-    toggleSidebar,
-    toggleWatchlist,
-    addToWatchlist,
-    removeFromWatchlist,
-    toggleChatPanel,
-    maximizeChatPanel,
-    sendChatMessage,
-    selectStrategy,
-    addIndicator
-};```
-
-## File: ./static/js/chart.js {#file---static-js-chart-js}
-
-```javascript
-let chart;
-let candleSeries;
-let activeDrawingTool = null;
-let drawings = [];
-let indicators = [];
-
-function createChart() {
-    const chartContainer = document.getElementById('candlestick-chart');
-    chart = LightweightCharts.createChart(chartContainer, {
-        width: chartContainer.offsetWidth,
-        height: chartContainer.offsetHeight,
-        layout: {
-            backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart-bg').trim(),
-            textColor: getComputedStyle(document.body).getPropertyValue('--text-color').trim(),
-        },
-        grid: {
-            vertLines: { color: 'rgba(197, 203, 206, 0.5)' },
-            horzLines: { color: 'rgba(197, 203, 206, 0.5)' },
-        },
-        crosshair: {
-            mode: LightweightCharts.CrosshairMode.Normal,
-        },
-        rightPriceScale: {
-            borderColor: 'rgba(197, 203, 206, 0.8)',
-        },
-        timeScale: {
-            borderColor: 'rgba(197, 203, 206, 0.8)',
-            timeVisible: true,
-            secondsVisible: false,
-        },
-    });
-
-    candleSeries = chart.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
-    });
-
-    chart.subscribeCrosshairMove(param => {
-        if (param.time) {
-            const data = param.seriesData.get(candleSeries);
-            if (data) {
-                const symbolInfo = document.getElementById('symbol-info');
-                symbolInfo.innerHTML = `O: ${data.open.toFixed(5)} H: ${data.high.toFixed(5)} L: ${data.low.toFixed(5)} C: ${data.close.toFixed(5)}`;
-            }
-        }
-    });
-
-    chart.timeScale().fitContent();
-
-    chartContainer.addEventListener('mousedown', handleMouseDown);
-    chartContainer.addEventListener('mousemove', handleMouseMove);
-    chartContainer.addEventListener('mouseup', handleMouseUp);
-    chartContainer.addEventListener('contextmenu', handleContextMenu);
-
-    window.addEventListener('resize', () => {
-        chart.applyOptions({
-            width: chartContainer.offsetWidth,
-            height: chartContainer.offsetHeight
-        });
-    });
-
-    fetchLatestData();
 }
 
-function fetchLatestData() {
-    fetch(`/api/candlestick_data?symbol=${currentSymbol}&timeframe=${currentTimeframe}&count=1000`)
+function toggleTheme() {
+    document.body.classList.toggle('light-theme');
+    localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
+    updateChartTheme();
+}
+
+function updateChartTheme() {
+    if (typeof chart !== 'undefined' && chart) {
+        chart.applyOptions({
+            layout: {
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart-bg').trim(),
+                textColor: getComputedStyle(document.body).getPropertyValue('--text-color').trim(),
+            }
+        });
+    }
+}
+```
+
+## File: ./static/js/modules/watchlist.js {#file---static-js-modules-watchlist-js}
+
+```javascript
+let watchlist = JSON.parse(localStorage.getItem('watchlist')) || ['EUR_USD', 'GBP_USD'];
+
+export function initWatchlist() {
+    const watchlistSearch = document.getElementById('watchlist-search');
+    const categoryButton = document.getElementById('instrument-category-button');
+    const categoryContent = document.getElementById('instrument-category-content');
+
+    watchlistSearch.addEventListener('input', debounce(handleSearch, 300));
+
+    categoryButton.addEventListener('click', () => {
+        categoryContent.classList.toggle('show');
+    });
+
+    document.querySelectorAll('#instrument-category-content a').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            categoryButton.textContent = item.textContent;
+            categoryContent.classList.remove('show');
+            handleSearch();
+        });
+    });
+
+    window.addEventListener('click', (e) => {
+        if (!e.target.matches('#instrument-category-button')) {
+            categoryContent.classList.remove('show');
+        }
+    });
+
+    document.getElementById('watchlist-toggle').addEventListener('click', toggleWatchlist);
+
+    updateWatchlistUI();
+}
+
+function toggleWatchlist() {
+    const watchlistPanel = document.getElementById('watchlist-panel');
+    watchlistPanel.classList.toggle('collapsed');
+    const toggleButton = document.getElementById('watchlist-toggle');
+    toggleButton.classList.toggle('hidden');
+    adjustChartSize();
+}
+
+function handleSearch() {
+    const query = document.getElementById('watchlist-search').value.trim();
+    const category = document.getElementById('instrument-category-button').textContent.toLowerCase();
+   
+    if (query.length > 0 || category !== 'all') {
+        searchInstruments(query, category);
+    } else {
+        document.getElementById('search-results').innerHTML = '';
+    }
+}
+
+function searchInstruments(query, category) {
+    fetch(`/api/search_instruments?query=${query}&category=${category}`)
         .then(response => response.json())
         .then(data => {
-            if (data && data.length > 0) {
-                const formattedData = data.map(d => ({
-                    time: new Date(d.time).getTime() / 1000,
-                    open: parseFloat(d.open),
-                    high: parseFloat(d.high),
-                    low: parseFloat(d.low),
-                    close: parseFloat(d.close)
-                }));
-                candleSeries.setData(formattedData);
-                updateSymbolInfo(currentSymbol, formattedData[formattedData.length - 1]);
-            }
+            updateSearchResults(data);
         })
-        .catch(error => console.error('Error fetching candlestick data:', error));
+        .catch(error => console.error('Error searching instruments:', error));
 }
 
-function updateSymbolInfo(symbol, lastCandle) {
-    const symbolInfo = document.getElementById('symbol-info');
-    symbolInfo.innerHTML = `${symbol} O: ${lastCandle.open.toFixed(5)} H: ${lastCandle.high.toFixed(5)} L: ${lastCandle.low.toFixed(5)} C: ${lastCandle.close.toFixed(5)}`;
-}
-
-function switchTimeframe(timeframe) {
-    currentTimeframe = timeframe;
-    fetchLatestData();
-}
-
-function switchSymbol(symbol) {
-    currentSymbol = symbol;
-    fetchLatestData();
-}
-
-function handleMouseDown(e) {
-    if (activeDrawingTool) {
-        const coords = chart.timeScale().coordinateToLogical(e.clientX);
-        const price = chart.priceScale('right').coordinateToPrice(e.clientY);
-        drawingStartPoint = { time: coords, price: price };
-    }
-}
-
-function handleMouseMove(e) {
-    if (activeDrawingTool && drawingStartPoint) {
-        const coords = chart.timeScale().coordinateToLogical(e.clientX);
-        const price = chart.priceScale('right').coordinateToPrice(e.clientY);
-
-        if (currentDrawing) {
-            chart.removeSeries(currentDrawing);
-        }
-
-        if (activeDrawingTool === 'trendline') {
-            currentDrawing = chart.addLineSeries({
-                color: '#2962FF',
-                lineWidth: 2,
-            });
-            currentDrawing.setData([
-                { time: drawingStartPoint.time, value: drawingStartPoint.price },
-                { time: coords, value: price }
-            ]);
-        } else if (activeDrawingTool === 'horizontalLine') {
-            currentDrawing = chart.addLineSeries({
-                color: '#2962FF',
-                lineWidth: 2,
-                priceLineVisible: false,
-            });
-            currentDrawing.setData([
-                { time: chart.timeScale().getVisibleLogicalRange().from, value: drawingStartPoint.price },
-                { time: chart.timeScale().getVisibleLogicalRange().to, value: drawingStartPoint.price }
-            ]);
-        }
-    }
-}
-
-function handleMouseUp(e) {
-    if (activeDrawingTool && drawingStartPoint) {
-        const coords = chart.timeScale().coordinateToLogical(e.clientX);
-        const price = chart.priceScale('right').coordinateToPrice(e.clientY);
-
-        if (currentDrawing) {
-            drawings.push(currentDrawing);
-            currentDrawing = null;
-        }
-
-        drawingStartPoint = null;
-    }
-}
-
-function handleContextMenu(e) {
-    e.preventDefault();
-    showChartContextMenu(e.clientX, e.clientY);
-}
-
-function showChartContextMenu(x, y) {
-    const contextMenu = document.getElementById('chart-context-menu');
-    contextMenu.style.display = 'block';
-    contextMenu.style.left = `${x}px`;
-    contextMenu.style.top = `${y}px`;
-
-    contextMenu.innerHTML = `
-        <div class="context-menu-item" onclick="toggleLogScale()">Toggle Log Scale</div>
-        <div class="context-menu-item" onclick="showChartSettings()">Chart Settings</div>
-        <div class="context-menu-item" onclick="clearAllDrawings()">Clear All Drawings</div>
-    `;
-}
-
-function toggleLogScale() {
-    const currentScale = chart.priceScale('right').mode();
-    chart.priceScale('right').applyOptions({
-        mode: currentScale === 0 ? 1 : 0, // 0 for normal, 1 for logarithmic
+function updateSearchResults(results) {
+    const searchResults = document.getElementById('search-results');
+    searchResults.innerHTML = '';
+    results.forEach(instrument => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.innerHTML = `
+            <span class="instrument-name">${instrument}</span>
+            <button class="add-btn">${watchlist.includes(instrument) ? '-' : '+'}</button>
+        `;
+        item.querySelector('.instrument-name').addEventListener('click', () => {
+            window.chartFunctions.switchSymbol(instrument);
+        });
+        item.querySelector('.add-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (watchlist.includes(instrument)) {
+                removeFromWatchlist(instrument);
+            } else {
+                addToWatchlist(instrument);
+            }
+            e.target.textContent = watchlist.includes(instrument) ? '-' : '+';
+        });
+        searchResults.appendChild(item);
     });
-    hideChartContextMenu();
 }
 
-function showChartSettings() {
-    // Implement chart settings dialog
-    console.log("Chart settings clicked");
-    hideChartContextMenu();
-}
-
-function clearAllDrawings() {
-    drawings.forEach(drawing => chart.removeSeries(drawing));
-    drawings = [];
-    hideChartContextMenu();
-}
-
-function hideChartContextMenu() {
-    const contextMenu = document.getElementById('chart-context-menu');
-    contextMenu.style.display = 'none';
-}
-
-function setActiveDrawingTool(tool) {
-    activeDrawingTool = tool;
-}
-
-function getLastPrice() {
-    const visibleData = candleSeries.visibleData();
-    if (visibleData.length > 0) {
-        return visibleData[visibleData.length - 1].close;
-    }
-    return null;
-}
-
-function addIndicator(type, params = {}) {
-    let indicator;
-    switch (type) {
-        case 'sma':
-            indicator = chart.addLineSeries({
-                color: 'rgba(4, 111, 232, 1)',
-                lineWidth: 2,
-            });
-            // Calculate SMA values
-            break;
-        case 'ema':
-            indicator = chart.addLineSeries({
-                color: 'rgba(255, 82, 82, 1)',
-                lineWidth: 2,
-            });
-            // Calculate EMA values
-            break;
-        // Add more indicator types as needed
-    }
-    indicators.push({ type, series: indicator, params });
-    // Calculate and set data for the indicator
-}
-
-function removeIndicator(index) {
-    if (index >= 0 && index < indicators.length) {
-        chart.removeSeries(indicators[index].series);
-        indicators.splice(index, 1);
+function addToWatchlist(symbol) {
+    if (!watchlist.includes(symbol)) {
+        watchlist.push(symbol);
+        saveWatchlist();
+        updateWatchlistUI();
     }
 }
 
-document.addEventListener('DOMContentLoaded', createChart);
+function removeFromWatchlist(symbol) {
+    watchlist = watchlist.filter(s => s !== symbol);
+    saveWatchlist();
+    updateWatchlistUI();
+}
 
-// Expose functions to be used in app.js
-window.chartFunctions = {
-    switchTimeframe,
-    switchSymbol,
-    fetchLatestData,
-    setActiveDrawingTool,
-    getLastPrice,
-    addIndicator,
-    removeIndicator
-};```
+function saveWatchlist() {
+    localStorage.setItem('watchlist', JSON.stringify(watchlist));
+}
 
-## File: ./static/js/indicators.js {#file---static-js-indicators-js}
+function updateWatchlistUI() {
+    const container = document.getElementById('watchlist-container');
+    container.innerHTML = '';
+    watchlist.forEach(symbol => {
+        const item = document.createElement('div');
+        item.className = 'watchlist-item';
+        item.setAttribute('draggable', true);
+        item.dataset.symbol = symbol;
+        item.innerHTML = `
+            <span class="symbol">${symbol}</span>
+            <span class="price">--</span>
+            <span class="change">--</span>
+            <button class="remove-btn">-</button>
+        `;
+        item.querySelector('.remove-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeFromWatchlist(symbol);
+        });
+        item.addEventListener('click', () => {
+            window.chartFunctions.switchSymbol(symbol);
+        });
+        container.appendChild(item);
+    });
+    updateWatchlistData();
+}
 
-```javascript
-const IndicatorManager = (function() {
-    let indicators = [];
-
-    function fetchIndicators() {
-        return fetch('/api/indicators')
+function updateWatchlistData() {
+    watchlist.forEach(symbol => {
+        fetch(`/api/price_data?symbol=${symbol}`)
             .then(response => response.json())
             .then(data => {
-                indicators = data;
-                return data;
-            });
-    }
+                const item = document.querySelector(`.watchlist-item[data-symbol="${symbol}"]`);
+                if (item && data.price) {
+                    item.querySelector('.price').textContent = data.price.toFixed(5);
+                    item.querySelector('.change').textContent = data.change.toFixed(2) + '%';
+                }
+            })
+            .catch(error => console.error('Error fetching price data:', error));
+    });
+}
 
-    function updateIndicatorsList(containerSelector, category = 'all') {
-        const container = document.querySelector(containerSelector);
-        container.innerHTML = '';
-        const filteredIndicators = category === 'all' 
-            ? indicators 
-            : indicators.filter(indicator => indicator.category === category);
-        
-        filteredIndicators.forEach(indicator => {
-            const item = document.createElement('div');
-            item.className = 'indicator-item';
-            item.innerHTML = `
-                <span class="indicator-name">${indicator.name}</span>
-                <span class="indicator-author">${indicator.author}</span>
-                <button class="favorite-btn ${indicator.isFavorite ? 'active' : ''}" data-id="${indicator.id}">
-                    <i class="fas fa-star"></i>
-                </button>
-                <button class="add-indicator-btn" data-id="${indicator.id}">Add</button>
-            `;
-            item.querySelector('.add-indicator-btn').addEventListener('click', () => addIndicator(indicator));
-            item.querySelector('.favorite-btn').addEventListener('click', (e) => toggleFavorite(e, indicator));
-            container.appendChild(item);
-        });
-    }
-
-    function filterIndicators(query) {
-        const filteredIndicators = indicators.filter(indicator => 
-            indicator.name.toLowerCase().includes(query.toLowerCase()) ||
-            indicator.author.toLowerCase().includes(query.toLowerCase())
-        );
-        updateIndicatorsList('#indicators-list', filteredIndicators);
-    }
-
-    function addIndicator(indicator) {
-        console.log(`Adding indicator: ${indicator.name}`);
-        // TODO: Implement actual indicator addition to the chart
-    }
-
-    function toggleFavorite(event, indicator) {
-        const button = event.currentTarget;
-        const isFavorite = !indicator.isFavorite;
-        button.classList.toggle('active');
-        
-        fetch('/api/indicators/favorite', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id: indicator.id, isFavorite: isFavorite }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                indicator.isFavorite = isFavorite;
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
-
-    return {
-        fetchIndicators,
-        updateIndicatorsList,
-        filterIndicators,
-        addIndicator
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
     };
-})();
-
-export default IndicatorManager;```
-
-## File: ./static/js/indicators/divergence.js {#file---static-js-indicators-divergence-js}
-
-```javascript
-class DivergenceDetector {
-    constructor(pivotLeftBars, pivotRightBars, lookBackLength, pivotPointsToCheck) {
-        this.pivotLeftBars = pivotLeftBars;
-        this.pivotRightBars = pivotRightBars;
-        this.lookBackLength = lookBackLength;
-        this.pivotPointsToCheck = pivotPointsToCheck;
-    }
-
-    detect(priceData, indicatorData) {
-        const pivotHighs = this.findPivotPoints(priceData, true);
-        const pivotLows = this.findPivotPoints(priceData, false);
-        const divergences = [];
-
-        // Check for bullish divergences
-        for (let i = 1; i < pivotLows.length; i++) {
-            const currentLow = pivotLows[i];
-            const previousLow = pivotLows[i - 1];
-
-            if (currentLow.price > previousLow.price && 
-                indicatorData[currentLow.index] < indicatorData[previousLow.index]) {
-                divergences.push({
-                    type: 'bullish',
-                    x1: previousLow.index,
-                    y1: previousLow.price,
-                    x2: currentLow.index,
-                    y2: currentLow.price
-                });
-            }
-        }
-
-        // Check for bearish divergences
-        for (let i = 1; i < pivotHighs.length; i++) {
-            const currentHigh = pivotHighs[i];
-            const previousHigh = pivotHighs[i - 1];
-
-            if (currentHigh.price < previousHigh.price && 
-                indicatorData[currentHigh.index] > indicatorData[previousHigh.index]) {
-                divergences.push({
-                    type: 'bearish',
-                    x1: previousHigh.index,
-                    y1: previousHigh.price,
-                    x2: currentHigh.index,
-                    y2: currentHigh.price
-                });
-            }
-        }
-
-        return divergences;
-    }
-
-    findPivotPoints(data, isHigh) {
-        const pivots = [];
-        for (let i = this.pivotLeftBars; i < data.length - this.pivotRightBars; i++) {
-            const slice = data.slice(i - this.pivotLeftBars, i + this.pivotRightBars + 1);
-            const centralValue = data[i];
-            const isPivot = isHigh 
-                ? slice.every(value => value <= centralValue)
-                : slice.every(value => value >= centralValue);
-
-            if (isPivot) {
-                pivots.push({ index: i, price: centralValue });
-            }
-        }
-        return pivots;
-    }
 }
 
-export default DivergenceDetector;
+setInterval(updateWatchlistData, 60000);
 ```
-
-## File: ./static/js/indicators/macd.js {#file---static-js-indicators-macd-js}
-
-```javascript
-class MACD {
-    constructor(fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
-        this.fastPeriod = fastPeriod;
-        this.slowPeriod = slowPeriod;
-        this.signalPeriod = signalPeriod;
-    }
-
-    calculate(data) {
-        const fastEMA = this.calculateEMA(data, this.fastPeriod);
-        const slowEMA = this.calculateEMA(data, this.slowPeriod);
-        const macdLine = fastEMA.map((fast, i) => fast - slowEMA[i]);
-        const signalLine = this.calculateEMA(macdLine, this.signalPeriod);
-        const histogram = macdLine.map((macd, i) => macd - signalLine[i]);
-
-        return {
-            macdLine,
-            signalLine,
-            histogram
-        };
-    }
-
-    calculateEMA(data, period) {
-        const k = 2 / (period + 1);
-        let ema = [data[0]];
-
-        for (let i = 1; i < data.length; i++) {
-            ema.push(data[i] * k + ema[i - 1] * (1 - k));
-        }
-
-        return ema;
-    }
-}
-
-export default MACD;
-```
-
-## File: ./static/js/strategies/myriadLabs.js {#file---static-js-strategies-myriadLabs-js}
-
-```javascript
-import MACD from '../indicators/macd.js';
-import DivergenceDetector from '../indicators/divergence.js';
-
-class MyriadLabsStrategy {
-    constructor(chart, params) {
-        this.chart = chart;
-        this.params = params;
-        this.macd = new MACD(params.macdFastLen, params.macdSlowLen, params.macdSigLen);
-        this.divergenceDetector = new DivergenceDetector(
-            params.divPivotLeftbars,
-            params.divPivotRightbars,
-            params.divPivotLookBackLen,
-            params.divPivotHowManyToCheck
-        );
-        this.setup = {
-            position_is_long: false,
-            position_is_short: false,
-            entry_time: null,
-            entry_price: null,
-            sl: null,
-            tp1: null,
-            tp2: null,
-            tp3: null,
-            risk: null
-        };
-        this.performance = {
-            net_profit: 0,
-            total_trades_closed: 0,
-            winning_trades: 0,
-            max_drawdown: 0,
-            gross_profit: 0,
-            gross_loss: 0
-        };
-    }
-
-    run(data) {
-        const closes = data.map(d => d.close);
-        const macdResult = this.macd.calculate(closes);
-        const divergences = this.divergenceDetector.detect(closes, macdResult.histogram);
-
-        this.checkEntryConditions(data, divergences);
-        this.manageTrades(data);
-        this.updateChart(data, macdResult, divergences);
-    }
-
-    checkEntryConditions(data, divergences) {
-        const lastCandle = data[data.length - 1];
-        const lastDivergence = divergences[divergences.length - 1];
-
-        if (lastDivergence && !this.setup.position_is_long && !this.setup.position_is_short) {
-            if (lastDivergence.type === 'bullish' && lastCandle.close > lastDivergence.y2) {
-                this.enterLong(lastCandle, lastDivergence.y1);
-            } else if (lastDivergence.type === 'bearish' && lastCandle.close < lastDivergence.y2) {
-                this.enterShort(lastCandle, lastDivergence.y1);
-            }
-        }
-    }
-
-    enterLong(candle, sl) {
-        this.setup = {
-            position_is_long: true,
-            position_is_short: false,
-            entry_time: candle.time,
-            entry_price: candle.close,
-            sl: sl,
-            risk: candle.close - sl
-        };
-        this.calculateTakeProfit();
-        this.chart.addMarker({
-            time: candle.time,
-            position: 'belowBar',
-            color: '#2196F3',
-            shape: 'arrowUp',
-            text: 'Long'
-        });
-    }
-
-    enterShort(candle, sl) {
-        this.setup = {
-            position_is_long: false,
-            position_is_short: true,
-            entry_time: candle.time,
-            entry_price: candle.close,
-            sl: sl,
-            risk: sl - candle.close
-        };
-        this.calculateTakeProfit();
-        this.chart.addMarker({
-            time: candle.time,
-            position: 'aboveBar',
-            color: '#FF5252',
-            shape: 'arrowDown',
-            text: 'Short'
-        });
-    }
-
-    calculateTakeProfit() {
-        const { entry_price, risk } = this.setup;
-        this.setup.tp1 = entry_price + this.params.tp1Ratio * risk * (this.setup.position_is_long ? 1 : -1);
-        this.setup.tp2 = entry_price + this.params.tp2Ratio * risk * (this.setup.position_is_long ? 1 : -1);
-        this.setup.tp3 = entry_price + this.params.tp3Ratio * risk * (this.setup.position_is_long ? 1 : -1);
-    }
-
-    manageTrades(data) {
-        if (!this.setup.position_is_long && !this.setup.position_is_short) return;
-
-        const lastCandle = data[data.length - 1];
-        if (this.setup.position_is_long) {
-            if (lastCandle.low <= this.setup.sl) {
-                this.exitTrade(lastCandle, 'Stop Loss');
-            } else if (lastCandle.high >= this.setup.tp1) {
-                this.partialExit(lastCandle, this.setup.tp1, this.params.tp1Share, 'TP1');
-            } else if (lastCandle.high >= this.setup.tp2) {
-                this.partialExit(lastCandle, this.setup.tp2, this.params.tp2Share, 'TP2');
-            } else if (lastCandle.high >= this.setup.tp3) {
-                this.exitTrade(lastCandle, 'TP3');
-            }
-        } else if (this.setup.position_is_short) {
-            if (lastCandle.high >= this.setup.sl) {
-                this.exitTrade(lastCandle, 'Stop Loss');
-            } else if (lastCandle.low <= this.setup.tp1) {
-                this.partialExit(lastCandle, this.setup.tp1, this.params.tp1Share, 'TP1');
-            } else if (lastCandle.low <= this.setup.tp2) {
-                this.partialExit(lastCandle, this.setup.tp2, this.params.tp2Share, 'TP2');
-            } else if (lastCandle.low <= this.setup.tp3) {
-                this.exitTrade(lastCandle, 'TP3');
-            }
-        }
-
-        if (this.params.sltpmode === 'Trailing') {
-            this.updateTrailingStop(lastCandle);
-        }
-    }
-
-    partialExit(candle, price, share, reason) {
-        const profit = (price - this.setup.entry_price) * (this.setup.position_is_long ? 1 : -1);
-        this.updatePerformance(profit * (share / 100));
-        this.chart.addMarker({
-            time: candle.time,
-            position: this.setup.position_is_long ? 'aboveBar' : 'belowBar',
-            color: '#4CAF50',
-            shape: 'circle',
-            text: reason
-        });
-    }
-
-    exitTrade(candle, reason) {
-        const profit = (candle.close - this.setup.entry_price) * (this.setup.position_is_long ? 1 : -1);
-        this.updatePerformance(profit);
-        this.chart.addMarker({
-            time: candle.time,
-            position: this.setup.position_is_long ? 'aboveBar' : 'belowBar',
-            color: '#FF9800',
-            shape: 'circle',
-            text: reason
-        });
-        this.setup = {
-            position_is_long: false,
-            position_is_short: false,
-            entry_time: null,
-            entry_price: null,
-            sl: null,
-            tp1: null,
-            tp2: null,
-            tp3: null,
-            risk: null
-        };
-    }
-
-    updateTrailingStop(candle) {
-        if (this.setup.position_is_long) {
-            const newSL = candle.close - this.params.trailingStopDistance;
-            if (newSL > this.setup.sl) {
-                this.setup.sl = newSL;
-            }
-        } else if (this.setup.position_is_short) {
-            const newSL = candle.close + this.params.trailingStopDistance;
-            if (newSL < this.setup.sl) {
-                this.setup.sl = newSL;
-            }
-        }
-    }
-
-    updatePerformance(profit) {
-        this.performance.net_profit += profit;
-        this.performance.total_trades_closed += 1;
-        if (profit > 0) {
-            this.performance.winning_trades += 1;
-            this.performance.gross_profit += profit;
-        } else {
-            this.performance.gross_loss -= profit;
-        }
-        this.performance.max_drawdown = Math.min(this.performance.max_drawdown, this.performance.net_profit);
-    }
-
-    updateChart(data, macdResult, divergences) {
-        // Update MACD series
-        this.chart.updateSeries('MACD Line', macdResult.macdLine.map((value, index) => ({ time: data[index].time, value })));
-        this.chart.updateSeries('Signal Line', macdResult.signalLine.map((value, index) => ({ time: data[index].time, value })));
-        this.chart.updateSeries('Histogram', macdResult.histogram.map((value, index) => ({ time: data[index].time, value })));
-
-        // Draw divergences
-        divergences.forEach(div => {
-            this.chart.addShape({
-                time1: data[div.x1].time,
-                price1: div.y1,
-                time2: data[div.x2].time,
-                price2: div.y2,
-                color: div.type === 'bullish' ? '#4CAF50' : '#FF5252',
-                lineWidth: 2,
-                lineStyle: 2,
-            });
-        });
-
-        // Update stop loss and take profit lines
-        if (this.setup.position_is_long || this.setup.position_is_short) {
-            this.chart.updateSeries('Stop Loss', [{ time: data[data.length - 1].time, value: this.setup.sl }]);
-            this.chart.updateSeries('TP1', [{ time: data[data.length - 1].time, value: this.setup.tp1 }]);
-            this.chart.updateSeries('TP2', [{ time: data[data.length - 1].time, value: this.setup.tp2 }]);
-            this.chart.updateSeries('TP3', [{ time: data[data.length - 1].time, value: this.setup.tp3 }]);
-        } else {
-            this.chart.updateSeries('Stop Loss', []);
-            this.chart.updateSeries('TP1', []);
-            this.chart.updateSeries('TP2', []);
-            this.chart.updateSeries('TP3', []);
-        }
-
-        // Update performance table
-        this.updatePerformanceTable();
-    }
-
-    updatePerformanceTable() {
-        const table = document.getElementById('performance-table');
-        if (!table) return;
-
-        table.innerHTML = `
-            <tr><td>Net Profit</td><td>${this.performance.net_profit.toFixed(2)}</td></tr>
-            <tr><td>Total Trades Closed</td><td>${this.performance.total_trades_closed}</td></tr>
-            <tr><td>Percent Profitable</td><td>${(this.performance.winning_trades / this.performance.total_trades_closed * 100).toFixed(2)}%</td></tr>
-            <tr><td>Profit Factor</td><td>${(this.performance.gross_profit / this.performance.gross_loss).toFixed(2)}</td></tr>
-            <tr><td>Max Drawdown</td><td>${this.performance.max_drawdown.toFixed(2)}</td></tr>
-            <tr><td>Avg Trade</td><td>${(this.performance.net_profit / this.performance.total_trades_closed).toFixed(2)}</td></tr>
-        `;
-    }
-}
-
-export default MyriadLabsStrategy;```
-
-## File: ./t.md {#file---t-md}
-
-```markdown
-static/css/styles.css
-static/js/app.js
-static/js/chart.js
-templates/index.html
-.env
-ai_client.py
-data_fetcher.py
-main.py
-requirements.txt```
 
 ## File: ./templates/index.html {#file---templates-index-html}
 
@@ -3401,34 +1904,43 @@ requirements.txt```
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <!-- MyriadLabs Strategy Settings Modal -->
+    <div id="myriadlabs-settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>MyriadLabs Strategy Settings</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div id="myriadlabs-settings-form">
+                <!-- Strategy settings form will be dynamically added here -->
+            </div>
+            <button id="apply-myriadlabs-settings">Apply Settings</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}" type="module"></script>
 </body>
-</html>```
+</html>
+```
+I need you to provide code for several files that need to be created or updated. Please follow these guidelines. It should not be in one text so I can easy click copy and paste:
 
-
-
-.
-├── Stories
-│   └── add_indicators_button_feature.md
-├── __pycache__
-│   ├── ai_client.cpython-311.pyc
-│   ├── ai_client.cpython-39.pyc
-│   ├── data_fetcher.cpython-311.pyc
-│   └── data_fetcher.cpython-39.pyc
-├── ai_client.py
-├── create_project_md.sh
-├── data_fetcher.py
-├── documentation
-│   └── project_overview.md
-├── main.py
-├── requirements.txt
-├── static
-│   ├── css
-│   └── js
-├── t.md
-└── templates
-    └── index.html
-
-8 directories, 13 files
-(base) paulos@pauloss-MBP mlabsV2 % 
+1. Provide the complete code for each file, not just snippets or partial updates.
+2. Present the code in a format that I can easily copy and paste into my command line.
+3. Use the following format for each file:
+```bash
+cat << EOF > [file_path_and_name]
+[complete file content here]
+EOF
+If a file requires a new directory to be created, include the necessary mkdir command before the cat command, like this:
+bashCopymkdir -p [directory_path] && cat << EOF > [file_path_and_name]
+[complete file content here]
+EOF
+Ensure that each command is on a new line and properly formatted for easy copying and pasting.
+If there are any special characters or formatting in the code that might interfere with the bash heredoc syntax (<<EOF), please adjust the code or use a different approach to ensure it works correctly in the command line.
+After providing all the file contents, give a brief explanation of what each file does and any additional steps I need to take (e.g., installing dependencies, running specific commands).
+The files I need code for are:
+[List the files you need, e.g.:
+src/components/MyComponent.js
+src/utils/helpers.js
+config/settings.json
+...]  Please follow my instructions and always include the entire code when you provide me code. I want complete code for each file that needs to be addressed with no placeholders

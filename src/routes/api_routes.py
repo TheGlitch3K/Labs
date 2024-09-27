@@ -1,22 +1,13 @@
-from flask import Blueprint, request, jsonify
-import os
-import json
+from flask import Blueprint, jsonify, request
 from src.data.data_fetcher import OandaDataFetcher
 from src.ai.ai_client import AIClient
+import os
+import json
 
 api_bp = Blueprint('api', __name__)
 
-# Initialize OandaDataFetcher with API key
-OANDA_API_KEY = os.getenv('OANDA_API_KEY')
-if not OANDA_API_KEY:
-    raise ValueError("OANDA_API_KEY is not set in environment variables.")
-data_fetcher = OandaDataFetcher(api_key=OANDA_API_KEY)
-
-# Initialize AI client with API key
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is not set in environment variables.")
-ai_client = AIClient(api_key=OPENAI_API_KEY)
+data_fetcher = OandaDataFetcher(api_key=os.getenv('OANDA_API_KEY'))
+ai_client = AIClient(api_key=os.getenv('OPENAI_API_KEY'))
 
 @api_bp.route('/candlestick_data')
 def candlestick_data():
@@ -43,7 +34,7 @@ def search_instruments():
     query = request.args.get('query', '').upper()
     category = request.args.get('category', 'all')
     try:
-        instruments = data_fetcher.search_instruments(query, category)
+        instruments = data_fetcher.search_instruments(query=query, category=category)
         return jsonify(instruments)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
