@@ -1,13 +1,9 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from src.data.data_fetcher import OandaDataFetcher
 from src.ai.ai_client import AIClient
-import os
 import json
 
 api_bp = Blueprint('api', __name__)
-
-data_fetcher = OandaDataFetcher(api_key=os.getenv('OANDA_API_KEY'))
-ai_client = AIClient(api_key=os.getenv('OPENAI_API_KEY'))
 
 @api_bp.route('/candlestick_data')
 def candlestick_data():
@@ -15,7 +11,7 @@ def candlestick_data():
     timeframe = request.args.get('timeframe', 'H1')
     count = int(request.args.get('count', 1000))
     try:
-        data = data_fetcher.fetch_candlestick_data(instrument=symbol, granularity=timeframe, count=count)
+        data = current_app.data_fetcher.fetch_candlestick_data(instrument=symbol, granularity=timeframe, count=count)
         return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -24,7 +20,7 @@ def candlestick_data():
 def price_data():
     symbol = request.args.get('symbol', 'EUR_USD')
     try:
-        data = data_fetcher.fetch_price_data(symbol)
+        data = current_app.data_fetcher.fetch_price_data(symbol)
         return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -34,7 +30,7 @@ def search_instruments():
     query = request.args.get('query', '').upper()
     category = request.args.get('category', 'all')
     try:
-        instruments = data_fetcher.search_instruments(query=query, category=category)
+        instruments = current_app.data_fetcher.search_instruments(query=query, category=category)
         return jsonify(instruments)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -47,7 +43,7 @@ def ai_chat():
     if not user_input:
         return jsonify({'error': 'No message provided'}), 400
     try:
-        ai_response = ai_client.generate_response(prompt=user_input, chart_context=chart_context)
+        ai_response = current_app.ai_client.generate_response(prompt=user_input, chart_context=chart_context)
         return jsonify({'response': ai_response})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

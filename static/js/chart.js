@@ -1,12 +1,15 @@
+import { addIndicator, removeIndicator, getActiveIndicators as getActiveIndicatorsFromModule, clearActiveIndicators } from './modules/activeIndicators.js';
+
 let chart;
 let candleSeries;
 let currentSymbol = 'EUR_USD';
 let currentTimeframe = 'H1';
 let activeDrawingTool = null;
 let drawings = [];
-let indicators = [];
+let currentDrawing = null;
+let drawingStartPoint = null;
 
-function createChart() {
+export function createChart() {
     const chartContainer = document.getElementById('candlestick-chart');
     chart = LightweightCharts.createChart(chartContainer, {
         width: chartContainer.offsetWidth,
@@ -60,7 +63,7 @@ function createChart() {
     fetchLatestData();
 }
 
-function fetchLatestData() {
+export function fetchLatestData() {
     fetch(`/api/candlestick_data?symbol=${currentSymbol}&timeframe=${currentTimeframe}&count=1000`)
         .then(response => response.json())
         .then(data => {
@@ -84,12 +87,12 @@ function updateSymbolInfo(symbol, lastCandle) {
     symbolInfo.innerHTML = `${symbol} O: ${lastCandle.open.toFixed(5)} H: ${lastCandle.high.toFixed(5)} L: ${lastCandle.low.toFixed(5)} C: ${lastCandle.close.toFixed(5)}`;
 }
 
-function switchTimeframe(timeframe) {
+export function switchTimeframe(timeframe) {
     currentTimeframe = timeframe;
     fetchLatestData();
 }
 
-function switchSymbol(symbol) {
+export function switchSymbol(symbol) {
     currentSymbol = symbol;
     fetchLatestData();
 }
@@ -160,13 +163,13 @@ function showChartContextMenu(x, y) {
     contextMenu.style.top = `${y}px`;
 
     contextMenu.innerHTML = `
-        <div class="context-menu-item" onclick="toggleLogScale()">Toggle Log Scale</div>
-        <div class="context-menu-item" onclick="showChartSettings()">Chart Settings</div>
-        <div class="context-menu-item" onclick="clearAllDrawings()">Clear All Drawings</div>
+        <div class="context-menu-item" onclick="window.chartFunctions.toggleLogScale()">Toggle Log Scale</div>
+        <div class="context-menu-item" onclick="window.chartFunctions.showChartSettings()">Chart Settings</div>
+        <div class="context-menu-item" onclick="window.chartFunctions.clearAllDrawings()">Clear All Drawings</div>
     `;
 }
 
-function toggleLogScale() {
+export function toggleLogScale() {
     const currentScale = chart.priceScale('right').mode();
     chart.priceScale('right').applyOptions({
         mode: currentScale === 0 ? 1 : 0, // 0 for normal, 1 for logarithmic
@@ -174,13 +177,13 @@ function toggleLogScale() {
     hideChartContextMenu();
 }
 
-function showChartSettings() {
+export function showChartSettings() {
     // Implement chart settings dialog
     console.log("Chart settings clicked");
     hideChartContextMenu();
 }
 
-function clearAllDrawings() {
+export function clearAllDrawings() {
     drawings.forEach(drawing => chart.removeSeries(drawing));
     drawings = [];
     hideChartContextMenu();
@@ -191,19 +194,19 @@ function hideChartContextMenu() {
     contextMenu.style.display = 'none';
 }
 
-function setActiveDrawingTool(tool) {
+export function setActiveDrawingTool(tool) {
     activeDrawingTool = tool;
 }
 
-function getLastPrice() {
-    const visibleData = candleSeries.visibleData();
-    if (visibleData.length > 0) {
-        return visibleData[visibleData.length - 1].close;
+export function getLastPrice() {
+    const seriesData = candleSeries.data();
+    if (seriesData.length > 0) {
+        return seriesData[seriesData.length - 1].close;
     }
     return null;
 }
 
-function addIndicator(type, params = {}) {
+export function addChartIndicator(type, params = {}) {
     let indicator;
     switch (type) {
         case 'sma':
@@ -222,18 +225,19 @@ function addIndicator(type, params = {}) {
             break;
         // Add more indicator types as needed
     }
-    indicators.push({ type, series: indicator, params });
+    addIndicator({ type, series: indicator, params });
     // Calculate and set data for the indicator
 }
 
-function removeIndicator(index) {
+export function removeChartIndicator(index) {
+    const indicators = getActiveIndicatorsFromModule();
     if (index >= 0 && index < indicators.length) {
         chart.removeSeries(indicators[index].series);
-        indicators.splice(index, 1);
+        removeIndicator(indicators[index].id);
     }
 }
 
-function adjustChartSize() {
+export function adjustChartSize() {
     const chartContainer = document.getElementById('candlestick-chart');
     chart.applyOptions({
         width: chartContainer.offsetWidth,
@@ -241,15 +245,23 @@ function adjustChartSize() {
     });
 }
 
-// Expose functions to be used in app.js
+export function getActiveIndicators() {
+    return getActiveIndicatorsFromModule();
+}
+
+// Make all exported functions available globally
 window.chartFunctions = {
     createChart,
+    fetchLatestData,
     switchTimeframe,
     switchSymbol,
+    toggleLogScale,
+    showChartSettings,
+    clearAllDrawings,
     setActiveDrawingTool,
     getLastPrice,
-    addIndicator,
-    removeIndicator,
+    addChartIndicator,
+    removeChartIndicator,
     adjustChartSize,
-    fetchLatestData
+    getActiveIndicators
 };

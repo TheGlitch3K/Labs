@@ -5,13 +5,13 @@ export function initIndicators() {
 function initializeIndicatorsModal() {
     const modal = document.getElementById('indicators-modal');
     const btn = document.getElementById('indicators-button');
-    const span = document.getElementsByClassName('close')[0];
+    const span = document.querySelector('#indicators-modal .close');
     const indicatorsList = document.getElementById('indicators-list');
     const indicatorSearch = document.getElementById('indicator-search');
-    const categoryButtons = document.querySelectorAll('.category-btn');
+    const categoryButtons = document.querySelectorAll('#indicator-categories .category-btn');
 
-    btn.onclick = () => modal.style.display = 'block';
-    span.onclick = () => modal.style.display = 'none';
+    if (btn) btn.onclick = () => { if (modal) modal.style.display = 'block'; };
+    if (span) span.onclick = () => { if (modal) modal.style.display = 'none'; };
     window.onclick = (event) => {
         if (event.target == modal) {
             modal.style.display = 'none';
@@ -29,30 +29,34 @@ function initializeIndicatorsModal() {
     ];
 
     function renderIndicators(filteredIndicators) {
-        indicatorsList.innerHTML = '';
-        filteredIndicators.forEach(indicator => {
-            const item = document.createElement('div');
-            item.className = 'indicator-item';
-            item.innerHTML = `
-                <span>${indicator.name}</span>
-                <button class="add-indicator-btn">Add</button>
-                <button class="favorite-btn"><i class="far fa-star"></i></button>
-            `;
-            item.querySelector('.add-indicator-btn').addEventListener('click', () => addIndicator(indicator.name));
-            item.querySelector('.favorite-btn').addEventListener('click', (e) => toggleFavorite(e.target));
-            indicatorsList.appendChild(item);
-        });
+        if (indicatorsList) {
+            indicatorsList.innerHTML = '';
+            filteredIndicators.forEach(indicator => {
+                const item = document.createElement('div');
+                item.className = 'indicator-item';
+                item.innerHTML = `
+                    <span>${indicator.name}</span>
+                    <button class="add-indicator-btn">Add</button>
+                    <button class="favorite-btn"><i class="far fa-star"></i></button>
+                `;
+                item.querySelector('.add-indicator-btn').addEventListener('click', () => addIndicator(indicator.name));
+                item.querySelector('.favorite-btn').addEventListener('click', (e) => toggleFavorite(e.target));
+                indicatorsList.appendChild(item);
+            });
+        }
     }
 
     renderIndicators(indicators);
 
-    indicatorSearch.addEventListener('input', () => {
-        const searchTerm = indicatorSearch.value.toLowerCase();
-        const filteredIndicators = indicators.filter(indicator => 
-            indicator.name.toLowerCase().includes(searchTerm)
-        );
-        renderIndicators(filteredIndicators);
-    });
+    if (indicatorSearch) {
+        indicatorSearch.addEventListener('input', () => {
+            const searchTerm = indicatorSearch.value.toLowerCase();
+            const filteredIndicators = indicators.filter(indicator => 
+                indicator.name.toLowerCase().includes(searchTerm)
+            );
+            renderIndicators(filteredIndicators);
+        });
+    }
 
     categoryButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -71,6 +75,9 @@ function addIndicator(indicatorName) {
     console.log(`Adding indicator: ${indicatorName}`);
     // Implement the logic to add the indicator to the chart
     // You might want to call a function from chartFunctions here
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator(indicatorName);
+    }
 }
 
 function toggleFavorite(button) {

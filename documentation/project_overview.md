@@ -1,18 +1,15 @@
-I am not seing the candle sticks on my chart. I need you to focus on strictly fixing this issue:
-
-Here is my code base:
-
 # Project Code Overview
 
-Generated on: Thu Sep 26 20:16:46 CDT 2024
+Generated on: Fri Sep 27 06:51:25 CDT 2024
 
 ## Table of Contents
 
-- [./Stories/add_indicators_button_feature.md](#file---Stories-add-indicators-button-feature-md)
 - [./config/settings.py](#file---config-settings-py)
 - [./main.py](#file---main-py)
+- [./noteToSelf.md](#file---noteToSelf-md)
 - [./requirements.txt](#file---requirements-txt)
 - [./src/ai/ai_client.py](#file---src-ai-ai-client-py)
+- [./src/ai_client.py](#file---src-ai-client-py)
 - [./src/data/data_fetcher.py](#file---src-data-data-fetcher-py)
 - [./src/routes/api_routes.py](#file---src-routes-api-routes-py)
 - [./src/routes/main_routes.py](#file---src-routes-main-routes-py)
@@ -27,6 +24,7 @@ Generated on: Thu Sep 26 20:16:46 CDT 2024
 - [./static/css/variables.css](#file---static-css-variables-css)
 - [./static/css/watchlist.css](#file---static-css-watchlist-css)
 - [./static/js/app.js](#file---static-js-app-js)
+- [./static/js/chart.js](#file---static-js-chart-js)
 - [./static/js/modules/chartControls.js](#file---static-js-modules-chartControls-js)
 - [./static/js/modules/chat.js](#file---static-js-modules-chat-js)
 - [./static/js/modules/indicators.js](#file---static-js-modules-indicators-js)
@@ -35,111 +33,6 @@ Generated on: Thu Sep 26 20:16:46 CDT 2024
 - [./static/js/modules/theme.js](#file---static-js-modules-theme-js)
 - [./static/js/modules/watchlist.js](#file---static-js-modules-watchlist-js)
 - [./templates/index.html](#file---templates-index-html)
-
-## File: ./Stories/add_indicators_button_feature.md {#file---Stories-add-indicators-button-feature-md}
-
-```markdown
-# Feature: Add Indicators Button to Chart Interface
-
-## Branch: add-indicators-button
-
-## Overview
-This feature adds an "Indicators" button to the chart interface, allowing users to access and manage technical indicators for their trading analysis. The button is positioned alongside the timeframe selector buttons, providing easy access to a modal window for indicator selection and configuration.
-
-## Purpose
-The purpose of this feature is to enhance the trading platform's analytical capabilities by giving users quick access to various technical indicators. This addition aims to improve user experience and provide more comprehensive tools for market analysis directly within the chart interface.
-
-## Implementation Details
-
-### HTML Changes (index.html)
-- Added a new button with id "indicators-button" to the timeframe selector div.
-- Implemented a modal structure for the indicators selection interface.
-
-### CSS Changes (styles.css)
-- Styled the new Indicators button to match existing timeframe buttons.
-- Added styles for the modal, including layout, positioning, and theme-consistent colors.
-- Ensured responsive design for various screen sizes.
-
-### JavaScript Changes (app.js)
-- Implemented openIndicatorsModal() and closeIndicatorsModal() functions to handle the modal's display.
-- Added fetchIndicators() function to retrieve indicator data from the server.
-- Created updateIndicatorsList() to populate the modal with available indicators.
-- Implemented filterIndicators() for search functionality within the indicators list.
-- Added event listeners for the new Indicators button and modal interactions.
-
-## Key Features
-1. Indicators button integrated seamlessly with existing timeframe selectors.
-2. Modal window for indicator selection and management.
-3. Search functionality to easily find specific indicators.
-4. Categorized view of indicators (Favorites, Personal, Technicals, Financials, Community).
-5. Responsive design ensuring functionality across different devices and screen sizes.
-
-## Technical Considerations
-- The feature uses vanilla JavaScript for DOM manipulation and event handling.
-- CSS variables are utilized for consistent theming and easy customization.
-- The modal is designed to be non-blocking, allowing users to interact with the chart while it's open.
-- Placeholder data is used for indicators, to be replaced with actual backend integration in future iterations.
-
-## Future Enhancements
-1. Implement backend API for fetching real indicator data.
-2. Add functionality to apply selected indicators to the chart.
-3. Develop a system for users to save and manage favorite indicators.
-4. Introduce more advanced filtering and sorting options for indicators.
-5. Implement indicator customization options (e.g., period, color).
-
-## Testing Considerations
-- Verify that the Indicators button appears correctly in various browser environments.
-- Ensure the modal opens and closes as expected.
-- Test the search functionality with various input scenarios.
-- Confirm that the UI is responsive and functions correctly on mobile devices.
-- Check for any potential conflicts with existing chart functionalities.
-
-## Deployment Notes
-- This feature is primarily front-end focused and doesn't require database migrations.
-- Ensure that the new static files (updated CSS and JS) are properly cached and served.
-- Monitor for any performance impacts, especially on mobile devices.
-
-## Conclusion
-The addition of the Indicators button and associated modal interface represents a significant enhancement to the trading platform's functionality. It provides users with easier access to technical analysis tools, potentially improving their trading decisions and overall satisfaction with the platform.
-
-## Short-term Improvement Plan
-
-To make this feature better and complete, we need to focus on the following steps:
-
-1. Backend Integration:
-   - Develop an API endpoint for fetching indicator data.
-   - Implement server-side logic to manage and store indicator configurations.
-
-2. Chart Integration:
-   - Modify the chart.js file to support adding and removing indicators.
-   - Implement rendering logic for different types of indicators (e.g., overlays, separate panels).
-
-3. Indicator Customization:
-   - Add UI elements in the modal for customizing indicator parameters.
-   - Implement real-time preview of indicator changes on the chart.
-
-4. Favorites System:
-   - Add functionality to mark indicators as favorites.
-   - Implement persistent storage of user preferences.
-
-5. Performance Optimization:
-   - Optimize indicator calculations for real-time updates.
-   - Implement efficient data caching mechanisms.
-
-6. Advanced Filtering:
-   - Add sorting options for the indicator list.
-   - Implement more advanced search and filter capabilities.
-
-7. Testing and Bug Fixes:
-   - Conduct thorough testing of all new functionalities.
-   - Address any bugs or issues discovered during testing.
-
-8. Documentation and Code Cleanup:
-   - Update documentation to reflect new features and usage instructions.
-   - Refactor and clean up code as necessary.
-
-By completing these steps, we will transform the current UI-focused feature into a fully functional and integrated part of the trading platform, significantly enhancing its analytical capabilities.
-```
 
 ## File: ./config/settings.py {#file---config-settings-py}
 
@@ -173,6 +66,8 @@ from dotenv import load_dotenv
 import logging
 from src.routes.main_routes import main_bp
 from src.routes.api_routes import api_bp
+from src.ai.ai_client import AIClient
+from src.data.data_fetcher import OandaDataFetcher
 
 # Load environment variables
 load_dotenv()
@@ -183,15 +78,135 @@ def create_app():
     # Initialize logging
     logging.basicConfig(level=logging.INFO)
 
+    # Configure app
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
+    app.config['OANDA_API_KEY'] = os.getenv('OANDA_API_KEY')
+    app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
+
+    # Initialize services
+    data_fetcher = OandaDataFetcher(api_key=app.config['OANDA_API_KEY'])
+    ai_client = AIClient(api_key=app.config['OPENAI_API_KEY'])
+
     # Register blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
+
+    # Add data_fetcher and ai_client to app context
+    app.data_fetcher = data_fetcher
+    app.ai_client = ai_client
 
     return app
 
 if __name__ == '__main__':
     app = create_app()
     app.run(debug=True)```
+
+## File: ./noteToSelf.md {#file---noteToSelf-md}
+
+```markdown
+/////////#CREATE PROJECT.MD://///////////  cat << 'EOF' > create_project_md.sh
+#!/bin/bash
+
+set -e
+
+# Configuration
+OUTPUT_DIR="documentation"
+OUTPUT_FILE="$OUTPUT_DIR/project_overview.md"
+MAX_FILE_SIZE_KB=1000
+EXCLUDE_DIRS=(".git" "node_modules" "venv" "__pycache__" "$OUTPUT_DIR")
+EXCLUDE_FILES=("create_project_md.sh")
+
+# Create the output directory
+mkdir -p "$OUTPUT_DIR"
+
+# Function to escape special characters for Markdown code blocks
+escape_markdown() {
+    sed 's/\`\`\`/\\`\\`\\`/g'
+}
+
+# Function to determine the language for syntax highlighting
+get_language() {
+    case "$1" in
+        py) echo "python" ;;
+        js) echo "javascript" ;;
+        html) echo "html" ;;
+        css) echo "css" ;;
+        sh) echo "bash" ;;
+        md) echo "markdown" ;;
+        json) echo "json" ;;
+        yml|yaml) echo "yaml" ;;
+        Dockerfile) echo "dockerfile" ;;
+        *) echo "plaintext" ;;
+    esac
+}
+
+# Function to check if a file should be excluded
+should_exclude() {
+    local file="$1"
+    
+    # Check if file is in EXCLUDE_FILES
+    for exclude in "${EXCLUDE_FILES[@]}"; do
+        [[ "$(basename "$file")" == "$exclude" ]] && return 0
+    done
+    
+    # Check if file is in an excluded directory
+    for dir in "${EXCLUDE_DIRS[@]}"; do
+        [[ "$file" == *"/$dir/"* || "$file" == *"$dir/"* ]] && return 0
+    done
+    
+    # Check file size
+    local size=$(du -k "$file" | cut -f1)
+    [[ $size -gt $MAX_FILE_SIZE_KB ]] && return 0
+    
+    return 1
+}
+
+# Create or overwrite the Markdown file
+echo "# Project Code Overview" > "$OUTPUT_FILE"
+echo "" >> "$OUTPUT_FILE"
+echo "Generated on: $(date)" >> "$OUTPUT_FILE"
+echo "" >> "$OUTPUT_FILE"
+echo "## Table of Contents" >> "$OUTPUT_FILE"
+echo "" >> "$OUTPUT_FILE"
+
+# Generate table of contents
+find . -type f -not -path '*/\.*' | sort | while read -r file; do
+    if ! should_exclude "$file"; then
+        echo "- [$file](#file-${file//[^a-zA-Z0-9]/-})" >> "$OUTPUT_FILE"
+    fi
+done
+
+echo "" >> "$OUTPUT_FILE"
+
+# Loop through all files in the current directory and subdirectories
+find . -type f -not -path '*/\.*' | sort | while read -r file; do
+    if ! should_exclude "$file"; then
+        echo "## File: $file {#file-${file//[^a-zA-Z0-9]/-}}" >> "$OUTPUT_FILE"
+        echo "" >> "$OUTPUT_FILE"
+        
+        # Determine the language for syntax highlighting
+        extension="${file##*.}"
+        if [[ "$extension" == "$file" ]]; then
+            extension="${file#.}"
+        fi
+        language=$(get_language "$extension")
+        
+        echo '\`\`\`'"$language" >> "$OUTPUT_FILE"
+        cat "$file" | escape_markdown >> "$OUTPUT_FILE"
+        echo '\`\`\`' >> "$OUTPUT_FILE"
+        echo "" >> "$OUTPUT_FILE"
+    fi
+done
+
+echo "Project overview Markdown file has been created: $OUTPUT_FILE"
+EOF
+
+chmod +x create_project_md.sh
+
+./create_project_md.sh
+
+tree -L 2
+ ////////////////```
 
 ## File: ./requirements.txt {#file---requirements-txt}
 
@@ -254,6 +269,59 @@ class AIClient:
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}")
             raise Exception(f"Error generating AI response: {str(e)}")```
+
+## File: ./src/ai_client.py {#file---src-ai-client-py}
+
+```python
+import openai
+import logging
+
+logger = logging.getLogger(__name__)
+
+class AIClient:
+    def __init__(self, api_key):
+        openai.api_key = api_key
+        self.system_prompt = (
+            "You are an AI assistant specializing in forex trading analysis and strategy.\n"
+            "Provide concise, informative responses to trading-related queries.\n"
+            "Offer insights on market trends, technical analysis, and risk management,\n"
+            "but avoid giving specific financial advice. Always remind users to do their own research\n"
+            "and consult with licensed financial advisors for personalized advice.\n"
+            "When provided with chart context, use this information to give more accurate and relevant responses.\n"
+            "Consider the current symbol, timeframe, price, and active indicators when formulating your answers."
+        )
+
+    def generate_response(self, prompt, chart_context=None):
+        try:
+            messages = [
+                {"role": "system", "content": self.system_prompt}
+            ]
+            if chart_context:
+                context_message = (
+                    f"Chart Context:\n"
+                    f"Symbol: {chart_context.get('symbol', 'N/A')}\n"
+                    f"Timeframe: {chart_context.get('timeframe', 'N/A')}\n"
+                    f"Price: {chart_context.get('price', 'N/A')}\n"
+                    f"Indicators: {', '.join(chart_context.get('indicators', [])) if chart_context.get('indicators') else 'None'}"
+                )
+                messages.append({"role": "user", "content": context_message})
+            messages.append({"role": "user", "content": prompt})
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                max_tokens=150,
+                n=1,
+                stop=None,
+                temperature=0.7,
+            )
+            message = response.choices[0].message['content'].strip()
+            logger.info(f"AI response generated successfully")
+            return message
+        except Exception as e:
+            logger.error(f"Error generating AI response: {str(e)}")
+            raise Exception(f"Error generating AI response: {str(e)}")
+```
 
 ## File: ./src/data/data_fetcher.py {#file---src-data-data-fetcher-py}
 
@@ -378,25 +446,16 @@ class OandaDataFetcher:
 ## File: ./src/routes/api_routes.py {#file---src-routes-api-routes-py}
 
 ```python
-from flask import Blueprint, request, jsonify
-import os
-import json
+from flask import Blueprint, jsonify, request
 from src.data.data_fetcher import OandaDataFetcher
 from src.ai.ai_client import AIClient
+import os
+import json
 
 api_bp = Blueprint('api', __name__)
 
-# Initialize OandaDataFetcher with API key
-OANDA_API_KEY = os.getenv('OANDA_API_KEY')
-if not OANDA_API_KEY:
-    raise ValueError("OANDA_API_KEY is not set in environment variables.")
-data_fetcher = OandaDataFetcher(api_key=OANDA_API_KEY)
-
-# Initialize AI client with API key
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is not set in environment variables.")
-ai_client = AIClient(api_key=OPENAI_API_KEY)
+data_fetcher = OandaDataFetcher(api_key=os.getenv('OANDA_API_KEY'))
+ai_client = AIClient(api_key=os.getenv('OPENAI_API_KEY'))
 
 @api_bp.route('/candlestick_data')
 def candlestick_data():
@@ -423,7 +482,7 @@ def search_instruments():
     query = request.args.get('query', '').upper()
     category = request.args.get('category', 'all')
     try:
-        instruments = data_fetcher.search_instruments(query, category)
+        instruments = data_fetcher.search_instruments(query=query, category=category)
         return jsonify(instruments)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -468,8 +527,7 @@ def favorite_indicator():
     with open('indicators.json', 'w') as f:
         json.dump(indicators, f)
     
-    return jsonify({'success': True})
-```
+    return jsonify({'success': True})```
 
 ## File: ./src/routes/main_routes.py {#file---src-routes-main-routes-py}
 
@@ -1277,7 +1335,283 @@ document.addEventListener('DOMContentLoaded', () => {
     initStrategies();
     initIndicators();
     initChartControls();
+
+    // Initialize the chart
+    if (window.chartFunctions && typeof window.chartFunctions.createChart === 'function') {
+        window.chartFunctions.createChart();
+    } else {
+        console.error('Chart functions not found. Make sure chart.js is loaded correctly.');
+    }
+
+    // Add event listener for window resize
+    window.addEventListener('resize', () => {
+        if (window.chartFunctions && typeof window.chartFunctions.adjustChartSize === 'function') {
+            window.chartFunctions.adjustChartSize();
+        }
+    });
 });
+
+// You can add any global functions or variables here if needed
+```
+
+## File: ./static/js/chart.js {#file---static-js-chart-js}
+
+```javascript
+let chart;
+let candleSeries;
+let currentSymbol = 'EUR_USD';
+let currentTimeframe = 'H1';
+let activeDrawingTool = null;
+let drawings = [];
+let indicators = [];
+
+function createChart() {
+    const chartContainer = document.getElementById('candlestick-chart');
+    chart = LightweightCharts.createChart(chartContainer, {
+        width: chartContainer.offsetWidth,
+        height: chartContainer.offsetHeight,
+        layout: {
+            backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart-bg').trim(),
+            textColor: getComputedStyle(document.body).getPropertyValue('--text-color').trim(),
+        },
+        grid: {
+            vertLines: { color: 'rgba(197, 203, 206, 0.5)' },
+            horzLines: { color: 'rgba(197, 203, 206, 0.5)' },
+        },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+        },
+        rightPriceScale: {
+            borderColor: 'rgba(197, 203, 206, 0.8)',
+        },
+        timeScale: {
+            borderColor: 'rgba(197, 203, 206, 0.8)',
+            timeVisible: true,
+            secondsVisible: false,
+        },
+    });
+
+    candleSeries = chart.addCandlestickSeries({
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderVisible: false,
+        wickUpColor: '#26a69a',
+        wickDownColor: '#ef5350',
+    });
+
+    chart.subscribeCrosshairMove(param => {
+        if (param.time) {
+            const data = param.seriesData.get(candleSeries);
+            if (data) {
+                const symbolInfo = document.getElementById('symbol-info');
+                symbolInfo.innerHTML = `O: ${data.open.toFixed(5)} H: ${data.high.toFixed(5)} L: ${data.low.toFixed(5)} C: ${data.close.toFixed(5)}`;
+            }
+        }
+    });
+
+    chart.timeScale().fitContent();
+
+    chartContainer.addEventListener('mousedown', handleMouseDown);
+    chartContainer.addEventListener('mousemove', handleMouseMove);
+    chartContainer.addEventListener('mouseup', handleMouseUp);
+    chartContainer.addEventListener('contextmenu', handleContextMenu);
+
+    fetchLatestData();
+}
+
+function fetchLatestData() {
+    fetch(`/api/candlestick_data?symbol=${currentSymbol}&timeframe=${currentTimeframe}&count=1000`)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.length > 0) {
+                const formattedData = data.map(d => ({
+                    time: new Date(d.time).getTime() / 1000,
+                    open: parseFloat(d.open),
+                    high: parseFloat(d.high),
+                    low: parseFloat(d.low),
+                    close: parseFloat(d.close)
+                }));
+                candleSeries.setData(formattedData);
+                updateSymbolInfo(currentSymbol, formattedData[formattedData.length - 1]);
+            }
+        })
+        .catch(error => console.error('Error fetching candlestick data:', error));
+}
+
+function updateSymbolInfo(symbol, lastCandle) {
+    const symbolInfo = document.getElementById('symbol-info');
+    symbolInfo.innerHTML = `${symbol} O: ${lastCandle.open.toFixed(5)} H: ${lastCandle.high.toFixed(5)} L: ${lastCandle.low.toFixed(5)} C: ${lastCandle.close.toFixed(5)}`;
+}
+
+function switchTimeframe(timeframe) {
+    currentTimeframe = timeframe;
+    fetchLatestData();
+}
+
+function switchSymbol(symbol) {
+    currentSymbol = symbol;
+    fetchLatestData();
+}
+
+function handleMouseDown(e) {
+    if (activeDrawingTool) {
+        const coords = chart.timeScale().coordinateToLogical(e.clientX);
+        const price = chart.priceScale('right').coordinateToPrice(e.clientY);
+        drawingStartPoint = { time: coords, price: price };
+    }
+}
+
+function handleMouseMove(e) {
+    if (activeDrawingTool && drawingStartPoint) {
+        const coords = chart.timeScale().coordinateToLogical(e.clientX);
+        const price = chart.priceScale('right').coordinateToPrice(e.clientY);
+
+        if (currentDrawing) {
+            chart.removeSeries(currentDrawing);
+        }
+
+        if (activeDrawingTool === 'trendline') {
+            currentDrawing = chart.addLineSeries({
+                color: '#2962FF',
+                lineWidth: 2,
+            });
+            currentDrawing.setData([
+                { time: drawingStartPoint.time, value: drawingStartPoint.price },
+                { time: coords, value: price }
+            ]);
+        } else if (activeDrawingTool === 'horizontalLine') {
+            currentDrawing = chart.addLineSeries({
+                color: '#2962FF',
+                lineWidth: 2,
+                priceLineVisible: false,
+            });
+            currentDrawing.setData([
+                { time: chart.timeScale().getVisibleLogicalRange().from, value: drawingStartPoint.price },
+                { time: chart.timeScale().getVisibleLogicalRange().to, value: drawingStartPoint.price }
+            ]);
+        }
+    }
+}
+
+function handleMouseUp(e) {
+    if (activeDrawingTool && drawingStartPoint) {
+        const coords = chart.timeScale().coordinateToLogical(e.clientX);
+        const price = chart.priceScale('right').coordinateToPrice(e.clientY);
+
+        if (currentDrawing) {
+            drawings.push(currentDrawing);
+            currentDrawing = null;
+        }
+
+        drawingStartPoint = null;
+    }
+}
+
+function handleContextMenu(e) {
+    e.preventDefault();
+    showChartContextMenu(e.clientX, e.clientY);
+}
+
+function showChartContextMenu(x, y) {
+    const contextMenu = document.getElementById('chart-context-menu');
+    contextMenu.style.display = 'block';
+    contextMenu.style.left = `${x}px`;
+    contextMenu.style.top = `${y}px`;
+
+    contextMenu.innerHTML = `
+        <div class="context-menu-item" onclick="toggleLogScale()">Toggle Log Scale</div>
+        <div class="context-menu-item" onclick="showChartSettings()">Chart Settings</div>
+        <div class="context-menu-item" onclick="clearAllDrawings()">Clear All Drawings</div>
+    `;
+}
+
+function toggleLogScale() {
+    const currentScale = chart.priceScale('right').mode();
+    chart.priceScale('right').applyOptions({
+        mode: currentScale === 0 ? 1 : 0, // 0 for normal, 1 for logarithmic
+    });
+    hideChartContextMenu();
+}
+
+function showChartSettings() {
+    // Implement chart settings dialog
+    console.log("Chart settings clicked");
+    hideChartContextMenu();
+}
+
+function clearAllDrawings() {
+    drawings.forEach(drawing => chart.removeSeries(drawing));
+    drawings = [];
+    hideChartContextMenu();
+}
+
+function hideChartContextMenu() {
+    const contextMenu = document.getElementById('chart-context-menu');
+    contextMenu.style.display = 'none';
+}
+
+function setActiveDrawingTool(tool) {
+    activeDrawingTool = tool;
+}
+
+function getLastPrice() {
+    const visibleData = candleSeries.visibleData();
+    if (visibleData.length > 0) {
+        return visibleData[visibleData.length - 1].close;
+    }
+    return null;
+}
+
+function addIndicator(type, params = {}) {
+    let indicator;
+    switch (type) {
+        case 'sma':
+            indicator = chart.addLineSeries({
+                color: 'rgba(4, 111, 232, 1)',
+                lineWidth: 2,
+            });
+            // Calculate SMA values
+            break;
+        case 'ema':
+            indicator = chart.addLineSeries({
+                color: 'rgba(255, 82, 82, 1)',
+                lineWidth: 2,
+            });
+            // Calculate EMA values
+            break;
+        // Add more indicator types as needed
+    }
+    indicators.push({ type, series: indicator, params });
+    // Calculate and set data for the indicator
+}
+
+function removeIndicator(index) {
+    if (index >= 0 && index < indicators.length) {
+        chart.removeSeries(indicators[index].series);
+        indicators.splice(index, 1);
+    }
+}
+
+function adjustChartSize() {
+    const chartContainer = document.getElementById('candlestick-chart');
+    chart.applyOptions({
+        width: chartContainer.offsetWidth,
+        height: chartContainer.offsetHeight
+    });
+}
+
+// Expose functions to be used in app.js
+window.chartFunctions = {
+    createChart,
+    switchTimeframe,
+    switchSymbol,
+    setActiveDrawingTool,
+    getLastPrice,
+    addIndicator,
+    removeIndicator,
+    adjustChartSize,
+    fetchLatestData
+};
 ```
 
 ## File: ./static/js/modules/chartControls.js {#file---static-js-modules-chartControls-js}
@@ -1918,29 +2252,9 @@ setInterval(updateWatchlistData, 60000);
         </div>
     </div>
 
+    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}" type="module"></script>
 </body>
 </html>
 ```
-I need you to provide code for several files that need to be created or updated. Please follow these guidelines. It should not be in one text so I can easy click copy and paste:
 
-1. Provide the complete code for each file, not just snippets or partial updates.
-2. Present the code in a format that I can easily copy and paste into my command line.
-3. Use the following format for each file:
-```bash
-cat << EOF > [file_path_and_name]
-[complete file content here]
-EOF
-If a file requires a new directory to be created, include the necessary mkdir command before the cat command, like this:
-bashCopymkdir -p [directory_path] && cat << EOF > [file_path_and_name]
-[complete file content here]
-EOF
-Ensure that each command is on a new line and properly formatted for easy copying and pasting.
-If there are any special characters or formatting in the code that might interfere with the bash heredoc syntax (<<EOF), please adjust the code or use a different approach to ensure it works correctly in the command line.
-After providing all the file contents, give a brief explanation of what each file does and any additional steps I need to take (e.g., installing dependencies, running specific commands).
-The files I need code for are:
-[List the files you need, e.g.:
-src/components/MyComponent.js
-src/utils/helpers.js
-config/settings.json
-...]  Please follow my instructions and always include the entire code when you provide me code. I want complete code for each file that needs to be addressed with no placeholders

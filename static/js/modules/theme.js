@@ -4,7 +4,10 @@ export function initTheme() {
         document.body.classList.add('light-theme');
     }
    
-    document.getElementById('theme-switch').addEventListener('change', toggleTheme);
+    const themeSwitch = document.getElementById('theme-switch');
+    if (themeSwitch) {
+        themeSwitch.addEventListener('change', toggleTheme);
+    }
 }
 
 function toggleTheme() {

@@ -1,25 +1,32 @@
 export function initSidebar() {
-    document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+    }
 }
 
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('collapsed');
-    adjustChartSize();
+    if (sidebar) {
+        sidebar.classList.toggle('collapsed');
+        adjustChartSize();
+    }
 }
 
 function adjustChartSize() {
-    var chartContainer = document.getElementById('chart-container');
-    var sidebar = document.getElementById('sidebar');
-    var watchlistPanel = document.getElementById('watchlist-panel');
+    const chartContainer = document.getElementById('chart-container');
+    const sidebar = document.getElementById('sidebar');
+    const watchlistPanel = document.getElementById('watchlist-panel');
    
-    var sidebarWidth = sidebar.classList.contains('collapsed') ? 50 : 250;
-    var watchlistWidth = watchlistPanel.classList.contains('collapsed') ? 0 : 300;
-   
-    var newWidth = window.innerWidth - sidebarWidth - watchlistWidth;
-    chartContainer.style.width = newWidth + 'px';
-   
-    if (typeof chart !== 'undefined' && chart) {
-        chart.applyOptions({ width: newWidth });
+    if (chartContainer && sidebar && watchlistPanel) {
+        const sidebarWidth = sidebar.classList.contains('collapsed') ? 50 : 250;
+        const watchlistWidth = watchlistPanel.classList.contains('collapsed') ? 0 : 300;
+       
+        const newWidth = window.innerWidth - sidebarWidth - watchlistWidth;
+        chartContainer.style.width = newWidth + 'px';
+       
+        if (window.chartFunctions && window.chartFunctions.adjustChartSize) {
+            window.chartFunctions.adjustChartSize();
+        }
     }
 }

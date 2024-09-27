@@ -6,10 +6,12 @@ export function initChartControls() {
 function initializeTimeframeButtons() {
     document.querySelectorAll('.timeframe-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            document.querySelector('.timeframe-btn[selected]').removeAttribute('selected');
+            document.querySelector('.timeframe-btn[selected]')?.removeAttribute('selected');
             e.target.setAttribute('selected', '');
             window.currentTimeframe = e.target.dataset.timeframe;
-            window.chartFunctions.switchTimeframe(e.target.dataset.timeframe);
+            if (window.chartFunctions && window.chartFunctions.switchTimeframe) {
+                window.chartFunctions.switchTimeframe(e.target.dataset.timeframe);
+            }
         });
     });
 }
@@ -18,7 +20,9 @@ function initializeChartButtons() {
     document.querySelectorAll('.tool-button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tool = e.target.closest('.tool-button').dataset.tool;
-            window.chartFunctions.setActiveDrawingTool(tool);
+            if (window.chartFunctions && window.chartFunctions.setActiveDrawingTool) {
+                window.chartFunctions.setActiveDrawingTool(tool);
+            }
         });
     });
 }
