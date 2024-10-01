@@ -1,7 +1,10 @@
 let activeIndicators = [];
+let nextId = 1;
 
 export function addIndicator(indicator) {
-    activeIndicators.push(indicator);
+    const newIndicator = { ...indicator, id: nextId++ };
+    activeIndicators.push(newIndicator);
+    return newIndicator;
 }
 
 export function removeIndicator(indicatorId) {
@@ -14,4 +17,5 @@ export function getActiveIndicators() {
 
 export function clearActiveIndicators() {
     activeIndicators = [];
+    nextId = 1;
 }

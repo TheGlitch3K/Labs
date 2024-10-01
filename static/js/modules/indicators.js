@@ -1,5 +1,8 @@
+import { getIndicators, getIndicatorDefaultParams } from './indicatorManager.js';
+
 export function initIndicators() {
     initializeIndicatorsModal();
+    initializeActiveIndicatorsList();
 }
 
 function initializeIndicatorsModal() {
@@ -18,15 +21,7 @@ function initializeIndicatorsModal() {
         }
     };
 
-    const indicators = [
-        { name: 'Simple Moving Average', category: 'trend' },
-        { name: 'Exponential Moving Average', category: 'trend' },
-        { name: 'Relative Strength Index', category: 'momentum' },
-        { name: 'Moving Average Convergence Divergence', category: 'momentum' },
-        { name: 'Bollinger Bands', category: 'volatility' },
-        { name: 'Average True Range', category: 'volatility' },
-        { name: 'On-Balance Volume', category: 'volume' },
-    ];
+    const indicators = getIndicators();
 
     function renderIndicators(filteredIndicators) {
         if (indicatorsList) {
@@ -36,10 +31,10 @@ function initializeIndicatorsModal() {
                 item.className = 'indicator-item';
                 item.innerHTML = `
                     <span>${indicator.name}</span>
-                    <button class="add-indicator-btn">Add</button>
+                    <button class="add-indicator-btn" data-indicator-id="${indicator.id}">Add</button>
                     <button class="favorite-btn"><i class="far fa-star"></i></button>
                 `;
-                item.querySelector('.add-indicator-btn').addEventListener('click', () => addIndicator(indicator.name));
+                item.querySelector('.add-indicator-btn').addEventListener('click', (e) => addIndicator(e.target.dataset.indicatorId));
                 item.querySelector('.favorite-btn').addEventListener('click', (e) => toggleFavorite(e.target));
                 indicatorsList.appendChild(item);
             });
@@ -71,16 +66,60 @@ function initializeIndicatorsModal() {
     });
 }
 
-function addIndicator(indicatorName) {
-    console.log(`Adding indicator: ${indicatorName}`);
-    // Implement the logic to add the indicator to the chart
-    // You might want to call a function from chartFunctions here
+function addIndicator(indicatorId) {
+    console.log(`Adding indicator: ${indicatorId}`);
     if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
-        window.chartFunctions.addChartIndicator(indicatorName);
+        const defaultParams = getIndicatorDefaultParams(indicatorId);
+        const newIndicatorId = window.chartFunctions.addChartIndicator(indicatorId, defaultParams);
+        if (newIndicatorId !== null) {
+            updateActiveIndicatorsList();
+        }
     }
 }
 
 function toggleFavorite(button) {
     button.classList.toggle('active');
     // Implement the logic to save favorite indicators
+}
+
+function initializeActiveIndicatorsList() {
+    const activeIndicatorsList = document.getElementById('active-indicators-list');
+    if (activeIndicatorsList) {
+        activeIndicatorsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-indicator-btn')) {
+                const indicatorId = parseInt(e.target.dataset.indicatorId);
+                removeIndicator(indicatorId);
+            } else if (e.target.classList.contains('settings-indicator-btn')) {
+                const indicatorId = parseInt(e.target.dataset.indicatorId);
+                window.chartFunctions.showStrategySettings(indicatorId);
+            }
+        });
+    }
+    updateActiveIndicatorsList();
+}
+
+export function updateActiveIndicatorsList() {
+    const activeIndicatorsList = document.getElementById('active-indicators-list');
+    if (activeIndicatorsList && window.chartFunctions && window.chartFunctions.getActiveIndicators) {
+        const activeIndicators = window.chartFunctions.getActiveIndicators();
+        activeIndicatorsList.innerHTML = '';
+        activeIndicators.forEach(indicator => {
+            const item = document.createElement('div');
+            item.className = 'active-indicator-item';
+            item.innerHTML = `
+                <span>${indicator.type}</span>
+                <button class="remove-indicator-btn" data-indicator-id="${indicator.id}">Remove</button>
+                ${indicator.type === 'myriadlabs' ? `<button class="settings-indicator-btn" data-indicator-id="${indicator.id}">Settings</button>` : ''}
+            `;
+            activeIndicatorsList.appendChild(item);
+        });
+    }
+}
+
+function removeIndicator(indicatorId) {
+    console.log(`Removing indicator: ${indicatorId}`);
+    if (window.chartFunctions && window.chartFunctions.removeChartIndicator) {
+        window.chartFunctions.removeChartIndicator(indicatorId);
+        updateActiveIndicatorsList();
+    }
 }

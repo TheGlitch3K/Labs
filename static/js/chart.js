@@ -1,4 +1,6 @@
 import { addIndicator, removeIndicator, getActiveIndicators as getActiveIndicatorsFromModule, clearActiveIndicators } from './modules/activeIndicators.js';
+import { renderIndicator } from './modules/indicatorManager.js';
+import { showStrategySettingsModal } from './modules/strategySettingsModal.js';
 
 let chart;
 let candleSeries;
@@ -178,7 +180,6 @@ export function toggleLogScale() {
 }
 
 export function showChartSettings() {
-    // Implement chart settings dialog
     console.log("Chart settings clicked");
     hideChartContextMenu();
 }
@@ -207,33 +208,50 @@ export function getLastPrice() {
 }
 
 export function addChartIndicator(type, params = {}) {
-    let indicator;
-    switch (type) {
-        case 'sma':
-            indicator = chart.addLineSeries({
-                color: 'rgba(4, 111, 232, 1)',
-                lineWidth: 2,
-            });
-            // Calculate SMA values
-            break;
-        case 'ema':
-            indicator = chart.addLineSeries({
-                color: 'rgba(255, 82, 82, 1)',
-                lineWidth: 2,
-            });
-            // Calculate EMA values
-            break;
-        // Add more indicator types as needed
+    const indicator = renderIndicator(chart, candleSeries, type, params);
+    if (indicator) {
+        let series = indicator.series;
+        if (!Array.isArray(series)) {
+            series = [series];
+        }
+        const newIndicator = addIndicator({ 
+            type, 
+            series: series, 
+            markers: indicator.markers, 
+            params 
+        });
+        if (indicator.markers) {
+            candleSeries.setMarkers(indicator.markers);
+        }
+        return newIndicator.id;
     }
-    addIndicator({ type, series: indicator, params });
-    // Calculate and set data for the indicator
+    return null;
 }
 
-export function removeChartIndicator(index) {
+export function removeChartIndicator(indicatorId) {
     const indicators = getActiveIndicatorsFromModule();
-    if (index >= 0 && index < indicators.length) {
-        chart.removeSeries(indicators[index].series);
-        removeIndicator(indicators[index].id);
+    const indicatorToRemove = indicators.find(ind => ind.id === indicatorId);
+    if (indicatorToRemove) {
+        if (Array.isArray(indicatorToRemove.series)) {
+            indicatorToRemove.series.forEach(series => chart.removeSeries(series));
+        } else if (indicatorToRemove.series) {
+            chart.removeSeries(indicatorToRemove.series);
+        }
+        if (indicatorToRemove.markers) {
+            candleSeries.setMarkers([]);
+        }
+        removeIndicator(indicatorId);
+    }
+}
+
+export function showStrategySettings(indicatorId) {
+    const indicators = getActiveIndicatorsFromModule();
+    const indicator = indicators.find(ind => ind.id === indicatorId);
+    if (indicator && indicator.type === 'myriadlabs') {
+        showStrategySettingsModal('Myriad Labs Strategy', indicator.params, (newParams) => {
+            removeChartIndicator(indicatorId);
+            addChartIndicator('myriadlabs', newParams);
+        });
     }
 }
 
@@ -249,7 +267,6 @@ export function getActiveIndicators() {
     return getActiveIndicatorsFromModule();
 }
 
-// Make all exported functions available globally
 window.chartFunctions = {
     createChart,
     fetchLatestData,
@@ -262,6 +279,7 @@ window.chartFunctions = {
     getLastPrice,
     addChartIndicator,
     removeChartIndicator,
+    showStrategySettings,
     adjustChartSize,
     getActiveIndicators
 };
