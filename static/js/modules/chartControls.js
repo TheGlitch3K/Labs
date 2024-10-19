@@ -1,6 +1,8 @@
 export function initChartControls() {
     initializeTimeframeButtons();
     initializeChartButtons();
+    initializeDrawingToolCustomization();
+    initializeSaveLoadLayout();
 }
 
 function initializeTimeframeButtons() {
@@ -27,4 +29,42 @@ function initializeChartButtons() {
     });
 }
 
-// You might want to add more functions here to handle other chart controls
+function initializeDrawingToolCustomization() {
+    const colorPicker = document.getElementById('drawing-tool-color');
+    const lineWidthPicker = document.getElementById('drawing-tool-line-width');
+
+    if (colorPicker && lineWidthPicker) {
+        colorPicker.addEventListener('input', (e) => {
+            const color = e.target.value;
+            if (window.chartFunctions && window.chartFunctions.setDrawingToolColor) {
+                window.chartFunctions.setDrawingToolColor(color);
+            }
+        });
+
+        lineWidthPicker.addEventListener('input', (e) => {
+            const lineWidth = e.target.value;
+            if (window.chartFunctions && window.chartFunctions.setDrawingToolLineWidth) {
+                window.chartFunctions.setDrawingToolLineWidth(lineWidth);
+            }
+        });
+    }
+}
+
+function initializeSaveLoadLayout() {
+    const saveLayoutButton = document.getElementById('save-layout');
+    const loadLayoutButton = document.getElementById('load-layout');
+
+    if (saveLayoutButton && loadLayoutButton) {
+        saveLayoutButton.addEventListener('click', () => {
+            if (window.chartFunctions && window.chartFunctions.saveChartLayout) {
+                window.chartFunctions.saveChartLayout();
+            }
+        });
+
+        loadLayoutButton.addEventListener('click', () => {
+            if (window.chartFunctions && window.chartFunctions.loadChartLayout) {
+                window.chartFunctions.loadChartLayout();
+            }
+        });
+    }
+}
