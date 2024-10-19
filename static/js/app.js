@@ -34,4 +34,11 @@ document.addEventListener('DOMContentLoaded', () => {
             chartFunctions.adjustChartSize();
         }
     });
+
+    // Ensure the initializeStrategiesDropdown function is called during the initialization process
+    if (typeof initializeStrategiesDropdown === 'function') {
+        initializeStrategiesDropdown();
+    } else {
+        console.error('initializeStrategiesDropdown function not found. Make sure strategies.js is loaded correctly.');
+    }
 });
