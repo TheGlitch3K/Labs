@@ -1,0 +1,485 @@
+//Copyright Myriadlabs
+
+//@version=5
+
+///// Table Visibility Input
+show_table = input.bool(true, title = "Show Performance Table", group = "Table Settings")
+
+// Input for table text color
+table_text_color = input.color(color.white, title = "Table Text Color", group = "Table Settings")
+
+
+// Create Performance Table
+var table performanceTable = table.new(position.bottom_left, 7, 2) // 6 rows and 2 columns for metrics and their values
+table.set_bgcolor(performanceTable, color.new(color.gray, 90))
+table.set_border_color(performanceTable, color.new(color.white, 90))
+table.set_border_width(performanceTable, 1)
+
+// Define strategy variables and metrics
+var float net_profit = 0.0
+var float max_equity = 0.0
+var float max_drawdown = 0.0
+var float gross_profit = 0.0
+var float gross_loss = 0.0
+var int total_trades_closed = 0
+var int winning_trades = 0
+var float avg_trade = 0.0 // Added this line to declare avg_trade
+
+// Update metrics based on strategy's trade information
+if (strategy.position_size[1] != 0 and strategy.position_size == 0) 
+    total_trades_closed += 1
+    float trade_profit = strategy.closedtrades.profit(strategy.closedtrades-1)
+    net_profit += trade_profit
+    if trade_profit > 0 
+        winning_trades += 1
+        gross_profit += trade_profit
+    else 
+        gross_loss -= trade_profit
+    
+    max_equity := math.max(max_equity, net_profit)
+    float current_drawdown = max_equity - net_profit
+    max_drawdown := math.max(max_drawdown, current_drawdown)
+
+    avg_trade := net_profit / total_trades_closed // Calculate average trade
+
+// Calculate derived metrics
+float percent_profitable = total_trades_closed > 0 ? (winning_trades / total_trades_closed) * 100 : 0
+float profit_factor = gross_loss > 0 ? gross_profit / gross_loss : na
+
+
+// Populate the table cells with two decimal places formatting
+if show_table
+    table.cell(performanceTable, 0, 0, "Net Profit")
+    table.cell(performanceTable, 0, 1, str.format("{0,number,0.00}", net_profit))
+    table.cell(performanceTable, 1, 0, "Total Trades Closed")
+    table.cell(performanceTable, 1, 1, str.tostring(total_trades_closed))
+    table.cell(performanceTable, 2, 0, "Percent Profitable")
+    table.cell(performanceTable, 2, 1, str.format("{0,number,0.00}", percent_profitable) + "%")
+    table.cell(performanceTable, 3, 0, "Profit Factor")
+    table.cell(performanceTable, 3, 1, na(profit_factor) ? "na" : str.format("{0,number,0.00}", profit_factor))
+    table.cell(performanceTable, 4, 0, "Max Drawdown")
+    table.cell(performanceTable, 4, 1, str.format("{0,number,0.00}", max_drawdown))
+    table.cell(performanceTable, 5, 0, "Avg Trade")
+    table.cell(performanceTable, 5, 1, str.format("{0,number,0.00}", avg_trade))
+
+// Apply text color to table cells
+    table.cell_set_text_color(performanceTable, 0, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 0, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 1, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 1, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 2, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 2, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 3, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 3, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 4, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 4, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 5, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 5, 1, table_text_color)
+
+strategy("MyriadLabs", overlay = true, max_lines_count = 500, max_labels_count = 500, process_orders_on_close = true, calc_on_order_fills = true)
+inx = bar_index
+
+
+//#region type
+//                  Type                    //
+type setupx
+    bool  position_is_long
+    bool  position_is_short
+    
+    int   entry_time
+    int   entry_bar_index
+    int   exit_bar_index = 0
+    
+    float entry_price
+    float position_size
+    float risk
+    float sl
+    float tp1
+    float tp2
+    float tp3
+    float hh
+    float ll
+    float RR
+
+var setup = setupx.new()
+//#endregion
+
+
+
+//#region input
+sltpmode         = input.string('Fixed', title = 'SL & TP Mode', options = ['Fixed', 'Trailing']              , group = 'SL & TP')
+maxFslOfst       = input.float (3      , title = 'Max SL Offset%', minval = 0.00001                                  , group = 'SL & TP')
+openPosWithMaxSL = input.bool  (false  , title = 'If the Offset Exceeded Max Limit, Open Position with Max SL Offset', group = 'SL & TP')
+
+tp1Ratio = input.float(1,  title = '1.    RR', minval = 0, maxval = 100, inline = '1', group = 'SL & TP')
+tp1Share = input.float(100, title = 'Share',    minval = 0, maxval = 100, inline = '1', group = 'SL & TP')
+tp2Ratio = input.float(2,  title = '2.    RR', minval = 0, maxval = 100, inline = '2', group = 'SL & TP')
+tp2Share = input.float(25, title = 'Share',    minval = 0, maxval = 100, inline = '2', group = 'SL & TP')
+tp3Ratio = input.float(3,  title = '3.    RR', minval = 0, maxval = 100, inline = '3', group = 'SL & TP')
+tp3Share = input.float(25, title = 'Share',    minval = 0, maxval = 100, inline = '3', group = 'SL & TP')
+moveFwdFSL = input.string('No', title = 'Keep Fixed SL One Step Behind the TP', options = ['Yes', 'No'], group = 'SL & TP') == 'Yes'
+
+
+macdSrc = input.source(close, title = 'Source', group = 'MACD')
+macdFastLen = input.int(12, title = 'Fast Length', group = 'MACD')
+macdSlowLen = input.int(26, title = 'Slow Length', group = 'MACD')
+macdSigLen = input.int(9, title = 'Signal Length', group = 'MACD')
+
+
+div_res = input.timeframe('240', title = 'Timeframe', group = 'Divergence detector')
+div_pivot_src = input.string('Close', title = 'Pivot source', options = ['Close', 'High/Low'], group = 'Divergence detector')
+div_pivot_leftbars = input.int(5, title = 'Pivot Left Bars', minval = 1, maxval = 50, group = 'Divergence detector')
+div_pivot_rightbars = input.int(5, title = 'Pivot Right Bars', minval = 1, maxval = 50, group = 'Divergence detector')
+div_pivot_lookBackLen = input.int(100, title = 'Lookback', minval = 30, maxval = 300, group = 'Divergence detector')
+div_pivot_howManyToCheck = input.int(10, title = 'Pivot points to check', minval = 1, maxval = 20, group = 'Divergence detector')
+div_plot = input.string('Yes', title = 'Show Divergence Lines', options = ['Yes', 'No'], group = 'Divergence detector') == 'Yes'
+
+div_posColr = input.color(color.new(#ffeb3b, 0), title = 'Positive Regular', inline = 'reg div colr', group = 'Divergence detector')
+div_negColr = input.color(color.new(#ff9900, 0), title = 'Negative Regular', inline = 'reg div colr', group = 'Divergence detector')
+
+
+// alertOnDiv   = input.bool(true, title = 'New Divergence', group = 'Alerts')
+// alertOnBreak = input.bool(true, title = 'BreakUp|BreakDown', group = 'Alerts')
+
+// PineConnector Settings
+var g_pc        = "PineConnector Settings"
+pc_id           = input.string(title="License ID", defval="YOUR_ID", group=g_pc, tooltip="This is your PineConnector license ID")
+pc_risk         = input.float(title="Risk Per Trade", defval=1, step=0.5, group=g_pc, tooltip="This is how much to risk per trade (% of balance or lots)")
+pc_prefix       = input.string(title="MetaTrader Prefix", defval="", group=g_pc, tooltip="This is your broker's MetaTrader symbol prefix")
+pc_suffix       = input.string(title="MetaTrader Suffix", defval="", group=g_pc, tooltip="This is your broker's MetaTrader symbol suffix")
+
+// Generate PineConnector alert string
+var symbol = pc_prefix + syminfo.ticker + pc_suffix
+pc_entry_alert(direction, sl, tp) =>
+    pc_id + "," + direction + "," + symbol + "," + "sl=" + str.tostring(sl) + ",tp=" + str.tostring(tp) + ",risk=" + str.tostring(pc_risk)
+
+//#endregion
+
+
+//#region function
+method entry(setupx this, string msg) =>
+    this.entry_time       := time
+    this.entry_bar_index  := bar_index
+    this.entry_price      := close
+    this.risk             := this.entry_price - this.sl
+    this.tp1              := this.entry_price + tp1Ratio * this.risk
+    if this.position_is_long
+        strategy.entry('L.En', strategy.long,  comment = msg)
+        // Generate PineConnector alert syntax & Send alert to webhook
+        pc_alert = pc_entry_alert("buy", this.sl, this.tp1)
+        alert(pc_alert, freq=alert.freq_once_per_bar_close)
+    if this.position_is_short
+        strategy.entry('S.En', strategy.short, comment = msg)
+        // Generate PineConnector alert syntax & Send alert to webhook
+        pc_alert = pc_entry_alert("sell", this.sl, this.tp1)
+        alert(pc_alert, freq=alert.freq_once_per_bar_close)
+
+
+method move_fwd_fsl(setupx this) =>
+    if bar_index > this.entry_bar_index
+        this.tp1 := this.entry_price + tp1Ratio * this.risk
+        this.tp2 := this.entry_price + tp2Ratio * this.risk
+        this.tp3 := this.entry_price + tp3Ratio * this.risk
+
+        if this.position_is_long
+            this.hh := math.max(high, this.hh)
+            this.RR := math.floor((this.hh - this.entry_price) / this.risk)
+            this.sl := math.max(this.sl, this.entry_price + (this.RR - 1) * this.risk)
+            strategy.exit('L.Ex1', 'L.En', stop = this.sl, limit = this.tp1, qty_percent = tp1Share, comment_loss = 'SL', comment_profit = 'TP1')
+            strategy.exit('L.Ex2', 'L.En', stop = this.sl, limit = this.tp2, qty_percent = tp2Share, comment_loss = 'SL', comment_profit = 'TP2')
+            strategy.exit('L.Ex3', 'L.En', stop = this.sl, limit = this.tp3, qty_percent = tp3Share, comment_loss = 'SL', comment_profit = 'TP3')
+        if this.position_is_short
+            this.ll := math.min(low, this.ll)
+            this.RR := math.floor((this.ll - this.entry_price) / this.risk)
+            this.sl := math.min(this.sl, this.entry_price + (this.RR - 1) * this.risk)
+            strategy.exit('S.Ex1', 'S.En', stop = this.sl, limit = this.tp1, qty_percent = tp1Share, comment_loss = 'SL', comment_profit = 'TP1')
+            strategy.exit('S.Ex2', 'S.En', stop = this.sl, limit = this.tp2, qty_percent = tp2Share, comment_loss = 'SL', comment_profit = 'TP2')
+            strategy.exit('S.Ex3', 'S.En', stop = this.sl, limit = this.tp3, qty_percent = tp3Share, comment_loss = 'SL', comment_profit = 'TP3')
+
+
+method set_tp(setupx this) =>
+    if not(strategy.position_size[1] or strategy.position_size)
+        this.tp1 := this.entry_price + tp1Ratio * this.risk
+        this.tp2 := this.entry_price + tp2Ratio * this.risk
+        this.tp3 := this.entry_price + tp3Ratio * this.risk
+        if this.position_is_long
+            strategy.exit('L.Ex1', 'L.En', stop = this.sl, limit = this.tp1, qty_percent = tp1Share, comment_loss = 'SL', comment_profit = 'TP1')
+            strategy.exit('L.Ex2', 'L.En', stop = this.sl, limit = this.tp2, qty_percent = tp2Share, comment_loss = 'SL', comment_profit = 'TP2')
+            strategy.exit('L.Ex3', 'L.En', stop = this.sl, limit = this.tp3, qty_percent = tp3Share, comment_loss = 'SL', comment_profit = 'TP3')
+        if this.position_is_short
+            strategy.exit('S.Ex1', 'S.En', stop = this.sl, limit = this.tp1, qty_percent = tp1Share, comment_loss = 'SL', comment_profit = 'TP1')
+            strategy.exit('S.Ex2', 'S.En', stop = this.sl, limit = this.tp2, qty_percent = tp2Share, comment_loss = 'SL', comment_profit = 'TP2')
+            strategy.exit('S.Ex3', 'S.En', stop = this.sl, limit = this.tp3, qty_percent = tp3Share, comment_loss = 'SL', comment_profit = 'TP3')
+
+
+method set_tsl(setupx this) =>
+    if bar_index > this.entry_bar_index
+        if this.position_is_long
+            this.hh := math.max(high, this.hh)
+            this.RR := math.floor((this.hh - this.entry_price) / this.risk)
+            this.sl := math.max(this.sl, this.entry_price + (this.RR - 1) * this.risk)
+            strategy.exit('L.Ex', 'L.En', stop = this.sl, comment_loss = 'SL', comment_profit = 'TP')
+        if this.position_is_short
+            this.ll := math.min(low, this.ll)
+            this.RR := math.floor((this.ll - this.entry_price) / this.risk)
+            this.sl := math.min(this.sl, this.entry_price + (this.RR - 1) * this.risk)
+            strategy.exit('S.Ex', 'S.En', stop = this.sl, comment_loss = 'SL', comment_profit = 'TP')
+
+
+method checkOfst(setupx this, string direction) =>
+    bool isOK = true
+    if math.abs(close - this.sl) / close * 100 > maxFslOfst
+        if openPosWithMaxSL
+            if direction == 'long'
+                this.sl := close * (100 - maxFslOfst) / 100
+            else if direction == 'short'
+                this.sl := close * (100 + maxFslOfst) / 100
+        else
+            isOK := false
+            this.sl := na
+    if isOK
+        this.position_is_long  := direction == 'long'
+        this.position_is_short := direction == 'short'
+    isOK
+
+
+divdet(bool useHL, int pivLeftBars, int pivRightBars, int pivLBLen, int pivToCheck, float isrc) =>
+    //useHL      => use High|Low as pivot source
+    //pivLen     => pivot's right & left bars
+    //pivLBLen   => allowed range for pivot check
+    //pivToCheck => number of pivots to check in the allowed range
+    int result = 0
+    int x1 = na, int x2 = na
+    float y1 = na, float y2 = na
+    indMA = ta.sma(isrc, pivLeftBars)//indicator's MA
+    
+    plsrc = useHL ? low : close
+    isPL = ta.pivotlow(plsrc, pivLeftBars, pivRightBars)
+    var pl_pos = array.new_int(), var pl_val = array.new_float()
+    if isPL
+        array.unshift(pl_pos, bar_index[pivRightBars])
+        array.unshift(pl_val, plsrc[pivRightBars])
+    availPL = array.size(pl_val)
+    if availPL >= 2
+        if (availPL > pivToCheck) or (bar_index - array.get(pl_pos, availPL - 1) > pivLBLen)
+            array.pop(pl_pos), array.pop(pl_val)
+            availPL := array.size(pl_val)
+    if isPL and availPL >= 2
+        for counter = availPL - 1 to 1
+            firstPivVal = array.get(pl_val, counter), secondPivVal = array.get(pl_val, 0)
+            firstPivInx = array.get(pl_pos, counter), secondPivInx = array.get(pl_pos, 0)
+            firstIncVal = isrc[bar_index - firstPivInx], secondIncVal = isrc[pivRightBars]
+
+            if firstPivVal > secondPivVal
+                if firstIncVal < secondIncVal
+                    pivDis = secondPivInx - firstPivInx
+                    pivDif = secondPivVal - firstPivVal
+                    pivSlope = pivDif / pivDis
+                    incDif = secondIncVal - firstIncVal
+                    incSlope = incDif / pivDis
+                    for counter = 1 to pivDis
+                        if plsrc[counter + pivRightBars] < secondPivVal - pivSlope * counter
+                            break
+                        if isrc[counter + pivRightBars] * 1 < secondIncVal - incSlope * counter
+                            break
+                        if counter == pivDis                            
+                            if isrc[bar_index - firstPivInx] < indMA[bar_index - firstPivInx - pivRightBars]
+                                if isrc[pivRightBars] < indMA
+                                    result := 1
+                                    x1 := time[pivDis + pivRightBars], x2 := time[pivRightBars]
+                                    y1 := plsrc[pivDis + pivRightBars], y2 := plsrc[pivRightBars]
+                                    break
+            if result
+                break
+    phsrc = useHL ? high : close
+    isPH = ta.pivothigh(phsrc, pivLeftBars, pivRightBars)
+    var ph_pos = array.new_int(), var ph_val = array.new_float()
+    if isPH
+        array.unshift(ph_pos, bar_index[pivRightBars])
+        array.unshift(ph_val, phsrc[pivRightBars])
+    availPH = array.size(ph_val)
+    if availPH >= 2
+        if (availPH > pivToCheck) or (bar_index - array.get(ph_pos, availPH - 1) > pivLBLen)
+            array.pop(ph_pos), array.pop(ph_val)
+            availPH := array.size(ph_val)
+    if isPH and availPH >= 2
+        for counter = availPH - 1 to 1
+            firstPivVal = array.get(ph_val, counter), secondPivVal = array.get(ph_val, 0)
+            firstPivInx = array.get(ph_pos, counter), secondPivInx = array.get(ph_pos, 0)
+            firstIncVal = isrc[bar_index - firstPivInx], secondIncVal = isrc[pivRightBars]
+
+            if firstPivVal < secondPivVal
+                if firstIncVal > secondIncVal
+                    pivDis = secondPivInx - firstPivInx
+                    pivDif = secondPivVal - firstPivVal
+                    pivSlope = pivDif / pivDis
+                    incDif = secondIncVal - firstIncVal
+                    incSlope = incDif / pivDis
+                    for counter = 1 to pivDis
+                        if phsrc[counter + pivRightBars] > secondPivVal - pivSlope * counter
+                            break
+                        if isrc[counter + pivRightBars] * 1 > secondIncVal - incSlope * counter
+                            break
+                        if counter == pivDis                            
+                            if isrc[bar_index - firstPivInx] > indMA[bar_index - firstPivInx - pivRightBars]
+                                if isrc[pivRightBars] > indMA
+                                    result := -1
+                                    x1 := time[pivDis + pivRightBars], x2 := time[pivRightBars]
+                                    y1 := phsrc[pivDis + pivRightBars], y2 := phsrc[pivRightBars]
+                                    break
+            if result
+                break
+    [result, x1, y1, x2, y2]
+//#endregion
+
+
+
+//#region computation
+var float hh = 0, var float ll = 10e6
+
+int _divx1 = na, int _divx2 = na
+
+var float sl = na
+
+var int divSide = na, var line divLine = na, var label divLabel = na
+
+var line neckLine = na
+
+
+
+[macd, macdSig, macdHist] = ta.macd(macdSrc, macdFastLen, macdSlowLen, macdSigLen)
+
+[div_result, divx1, divy1, divx2, divy2] = request.security(syminfo.tickerid, div_res, divdet(div_pivot_src == 'High/Low', div_pivot_leftbars, div_pivot_rightbars, div_pivot_lookBackLen, div_pivot_howManyToCheck, macdHist))
+
+
+
+if div_result
+    divSide := div_result
+    sty  = div_result == 1 ? label.style_label_up : label.style_label_down
+    divLine := line.new(divx1, divy1, divx2, divy2, xloc = xloc.bar_time, color = #00000000, width = 2)
+    divLabel := label.new(divx2, divy2, xloc = xloc.bar_time, text = 'MACD', color = #00000000, textcolor = #00000000, size = size.small, style = sty)
+    hh := 0, ll := 10e6
+    sl := divy2
+    for i = 0 to 300
+        if time[i] == divx2
+            _divx2 := inx - i
+        if time[i] == divx1
+            _divx1 := inx - i
+            break
+
+    info = str.format_time(divx1, "MM-dd'T'HH:mm", syminfo.timezone) + '-' + str.format_time(divx2, "MM-dd'T'HH:mm", syminfo.timezone)
+
+    len = _divx2 - _divx1
+    if divSide == +1
+        for j = inx - _divx2 to inx - _divx1
+            hh := math.max(hh, high[j])
+        neckLine := line.new(_divx1, hh, _divx2, hh, color = #00000000)
+        // if alertOnDiv
+        //     alert('New Positive Divergence ' + info, alert.freq_once_per_bar_close)
+    if divSide == -1
+        for j = inx - _divx2 to inx - _divx1
+            ll := math.min(ll, low[j])
+        neckLine := line.new(_divx1, ll, _divx2, ll, color = #00000000)
+        // if alertOnDiv
+        //     alert('New Negative Divergence ' + info, alert.freq_once_per_bar_close)
+
+
+if divSide == +1
+    if low < sl
+        divSide := na
+        sl := na
+        hh := 0, ll := 10e6
+if divSide == -1
+    if high > sl
+        divSide := na
+        sl := na
+        hh := 0, ll := 10e6
+//#endregion
+
+
+
+//#region strategy
+//                 Strategy                 //
+if not strategy.position_size
+    setup.entry_price       := na
+    setup.entry_time        := na
+    setup.sl                := na
+    setup.position_is_long  := na
+    setup.position_is_short := na
+    setup.risk              := na
+    setup.tp1               := na
+    setup.tp2               := na
+    setup.tp3               := na
+    setup.hh                := 0
+    setup.ll                := 999999
+    setup.RR                := na
+
+    if strategy.position_size[1]
+        setup.exit_bar_index := bar_index[1]
+        hh       := 0
+        ll       := 10e6
+        neckLine := na
+        divSide  := na
+        divLine  := na
+        divLabel := na
+
+bool longCnd = na, bool shortCnd = na
+
+//-->long
+if not(strategy.position_size[1] or strategy.position_size or setup.position_is_long)
+    if divSide == +1
+        if close > hh
+            setup.sl := sl// append the initial SL at the entry time---> setup.sl := close - atrSLOfst
+            if setup.checkOfst('long')//checking max sl offset
+                setup.entry('Long')
+                neckLine.set_x2(inx), neckLine.set_color(div_posColr)
+                label.new(inx, neckLine.get_y1(), text = 'Breakup', color = div_posColr, style = label.style_label_left, textcolor = color.black, size = size.small)
+                divLine.set_color(div_posColr)
+                divLabel.set_color(div_posColr), divLabel.set_textcolor(color.black)
+                //if alertOnBreak
+                    //alert('Breakup' + '@' + str.tostring(neckLine.get_y1()))
+
+//short
+if not(strategy.position_size[1] or strategy.position_size or setup.position_is_short)
+    if divSide == -1
+        if close < ll
+            setup.sl := sl// append the initial SL at the entry time---> setup.sl := close + atrSLOfst
+            if setup.checkOfst('short')//checking max sl offset
+                setup.entry('Short')
+                neckLine.set_x2(inx), neckLine.set_color(div_negColr)
+                label.new(inx, neckLine.get_y1(), text = 'Breakdown', color = div_negColr, style = label.style_label_left, textcolor = color.black, size = size.small)
+                divLine.set_color(div_negColr)
+                divLabel.set_color(div_negColr), divLabel.set_textcolor(color.black)
+                //if alertOnBreak
+                    //alert('Breakdown' + '@' + str.tostring(neckLine.get_y1()))
+
+
+//-->SL & TP
+bool shwtp2 = true, bool shwtp3 = true
+//-->
+if tp1Share == 100
+    shwtp2 := false
+else if tp1Share + tp2Share >= 100
+    shwtp3 := false
+    tp2Share := 100
+else
+    tp3Share := 100
+//<--
+
+if sltpmode == 'Fixed'
+    if moveFwdFSL
+        setup.move_fwd_fsl()
+    else
+        setup.set_tp()
+
+if sltpmode == 'Trailing'
+    setup.set_tsl()
+
+//<--SL & TP
+
+//#endregion
+
+plot(setup.sl,  title = 'SL',  style = plot.style_linebr, color = color.red)
+plot(setup.tp1, title = 'TP1', style = plot.style_linebr, color = color.aqua)
+plot(shwtp2 ? setup.tp2 : na, title = 'TP2', style = plot.style_linebr, color = color.blue)
+plot(shwtp3 ? setup.tp3 : na, title = 'TP3', style = plot.style_linebr, color = color.purple)
