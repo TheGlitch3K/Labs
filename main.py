@@ -23,7 +23,7 @@ def create_app():
 
     # Initialize services
     app.data_fetcher = OandaDataFetcher(api_key=app.config['OANDA_API_KEY'])
-    app.ai_client = AIClient()
+    app.ai_client = AIClient(api_key=app.config['OPENAI_API_KEY'])
 
     # Register blueprints
     app.register_blueprint(main_bp)
