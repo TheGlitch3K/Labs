@@ -5,7 +5,7 @@ import { initAIAssistant } from './modules/aiAssistant.js';
 import { initStrategies } from './modules/strategies.js';
 import { initIndicators } from './modules/indicators.js';
 import { initChartControls } from './modules/chartControls.js';
-import * as chartFunctions from './chart.js';
+import * as chartFunctions from './modules/chart.js';
 
 // Initialize global variables
 window.currentSymbol = 'EUR_USD';
