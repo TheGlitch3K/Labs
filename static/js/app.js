@@ -34,4 +34,34 @@ document.addEventListener('DOMContentLoaded', () => {
             chartFunctions.adjustChartSize();
         }
     });
+
+    // Add tooltips to elements
+    addTooltips();
 });
+
+function addTooltips() {
+    const elementsWithTooltips = document.querySelectorAll('[data-tooltip]');
+    elementsWithTooltips.forEach(element => {
+        element.addEventListener('mouseenter', showTooltip);
+        element.addEventListener('mouseleave', hideTooltip);
+    });
+}
+
+function showTooltip(event) {
+    const tooltipText = event.target.getAttribute('data-tooltip');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.innerText = tooltipText;
+    document.body.appendChild(tooltip);
+
+    const rect = event.target.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + window.scrollX + rect.width / 2 - tooltip.offsetWidth / 2}px`;
+    tooltip.style.top = `${rect.top + window.scrollY - tooltip.offsetHeight - 5}px`;
+}
+
+function hideTooltip() {
+    const tooltip = document.querySelector('.tooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
+}

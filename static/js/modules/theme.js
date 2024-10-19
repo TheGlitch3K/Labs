@@ -2,8 +2,10 @@ export function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
+    } else if (savedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
     }
-   
+
     const themeSwitch = document.getElementById('theme-switch');
     if (themeSwitch) {
         themeSwitch.addEventListener('change', toggleTheme);
@@ -11,8 +13,15 @@ export function initTheme() {
 }
 
 function toggleTheme() {
-    document.body.classList.toggle('light-theme');
-    localStorage.setItem('theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
+    if (document.body.classList.contains('light-theme')) {
+        document.body.classList.remove('light-theme');
+        document.body.classList.add('dark-theme');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.body.classList.remove('dark-theme');
+        document.body.classList.add('light-theme');
+        localStorage.setItem('theme', 'light');
+    }
     updateChartTheme();
 }
 

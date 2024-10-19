@@ -11,6 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'your-secret-key')
 # API keys
 OANDA_API_KEY = os.getenv('OANDA_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+FINANCIAL_NEWS_API_KEY = os.getenv('FINANCIAL_NEWS_API_KEY')
 
 # Other settings
 CANDLESTICK_DATA_COUNT = 1000

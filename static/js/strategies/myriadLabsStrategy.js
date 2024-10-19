@@ -55,7 +55,7 @@ function detectDivergence(data, macdData, pivots, lookback, toCheck) {
 
         for (let j = 0; j < Math.min(toCheck, pricePivots.length - 1); j++) {
             for (let k = j + 1; k < Math.min(toCheck, pricePivots.length); k++) {
-                if (pricePivots[j] && pricePivots[k] && 
+                if (pricePivots[j] && pricePivots.k && 
                     pricePivots[j].value > pricePivots[k].value && 
                     macdPivots[pricePivots[j].index - (i - lookback)] && 
                     macdPivots[pricePivots[k].index - (i - lookback)] &&

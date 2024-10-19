@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, current_app
 from src.data.data_fetcher import OandaDataFetcher
 from src.ai.ai_client import AIClient
 import json
+import requests
 
 api_bp = Blueprint('api', __name__)
 
@@ -76,3 +77,18 @@ def favorite_indicator():
         json.dump(indicators, f)
     
     return jsonify({'success': True})
+
+@api_bp.route('/financial_news')
+def financial_news():
+    api_key = current_app.config.get('FINANCIAL_NEWS_API_KEY')
+    if not api_key:
+        return jsonify({'error': 'Financial news API key not configured'}), 500
+
+    url = f"https://newsapi.org/v2/everything?q=finance&apiKey={api_key}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        news_data = response.json()
+        return jsonify(news_data)
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 500
