@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify, request, current_app
 from src.data.data_fetcher import OandaDataFetcher
 from src.ai.ai_client import AIClient
+from src.strategies.strategy_manager import StrategyManager
 import json
 
 api_bp = Blueprint('api', __name__)
+strategy_manager = StrategyManager()
 
 @api_bp.route('/candlestick_data')
 def candlestick_data():
@@ -76,3 +78,27 @@ def favorite_indicator():
         json.dump(indicators, f)
     
     return jsonify({'success': True})
+
+@api_bp.route('/strategies', methods=['POST'])
+def add_strategy():
+    data = request.get_json()
+    strategy_name = data.get('name')
+    if not strategy_name:
+        return jsonify({'error': 'No strategy name provided'}), 400
+    try:
+        strategy_manager.add_strategy(strategy_name)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/strategies', methods=['DELETE'])
+def remove_strategy():
+    data = request.get_json()
+    strategy_name = data.get('name')
+    if not strategy_name:
+        return jsonify({'error': 'No strategy name provided'}), 400
+    try:
+        strategy_manager.remove_strategy(strategy_name)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
