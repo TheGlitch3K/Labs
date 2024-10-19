@@ -76,3 +76,29 @@ function addMACDDivergence() {
         window.chartFunctions.addChartIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
     }
 }
+
+function toggleStrategy(strategy) {
+    if (activeStrategy === strategy) {
+        activeStrategy = null;
+        removeExistingStrategyIndicators();
+        console.log(`Strategy ${strategy} removed`);
+    } else {
+        selectStrategy(strategy);
+    }
+}
+
+function addStrategyToggleUI() {
+    const dropdown = document.getElementById('strategies-dropdown');
+    if (dropdown) {
+        strategies.forEach(strategy => {
+            const button = document.createElement('button');
+            button.textContent = strategy;
+            button.addEventListener('click', () => toggleStrategy(strategy));
+            dropdown.appendChild(button);
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    addStrategyToggleUI();
+});

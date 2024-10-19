@@ -8,6 +8,8 @@ let activeDrawingTool = null;
 let drawings = [];
 let currentDrawing = null;
 let drawingStartPoint = null;
+let performanceTable = [];
+let activeTrades = [];
 
 export function createChart() {
     const chartContainer = document.getElementById('candlestick-chart');
@@ -77,6 +79,7 @@ export function fetchLatestData() {
                 }));
                 candleSeries.setData(formattedData);
                 updateSymbolInfo(currentSymbol, formattedData[formattedData.length - 1]);
+                applyMACDDivergenceStrategy(formattedData);
             }
         })
         .catch(error => console.error('Error fetching candlestick data:', error));
@@ -247,6 +250,113 @@ export function adjustChartSize() {
 
 export function getActiveIndicators() {
     return getActiveIndicatorsFromModule();
+}
+
+function applyMACDDivergenceStrategy(data) {
+    const macdData = calculateMACD(data);
+    const divergences = identifyDivergences(macdData);
+    const trades = executeTrades(divergences, data);
+    visualizePerformanceTable(trades);
+}
+
+function calculateMACD(data) {
+    const fastPeriod = 12;
+    const slowPeriod = 26;
+    const signalPeriod = 9;
+
+    const emaFast = calculateEMA(data, fastPeriod);
+    const emaSlow = calculateEMA(data, slowPeriod);
+    const macd = emaFast.map((value, index) => value - emaSlow[index]);
+    const signal = calculateEMA(macd, signalPeriod);
+    const histogram = macd.map((value, index) => value - signal[index]);
+
+    return { macd, signal, histogram };
+}
+
+function calculateEMA(data, period) {
+    const k = 2 / (period + 1);
+    const emaArray = [data[0].close];
+    for (let i = 1; i < data.length; i++) {
+        emaArray.push(data[i].close * k + emaArray[i - 1] * (1 - k));
+    }
+    return emaArray;
+}
+
+function identifyDivergences(macdData) {
+    const divergences = [];
+    for (let i = 1; i < macdData.macd.length - 1; i++) {
+        if (macdData.macd[i] > macdData.macd[i - 1] && macdData.macd[i] > macdData.macd[i + 1]) {
+            divergences.push({ index: i, type: 'bearish' });
+        } else if (macdData.macd[i] < macdData.macd[i - 1] && macdData.macd[i] < macdData.macd[i + 1]) {
+            divergences.push({ index: i, type: 'bullish' });
+        }
+    }
+    return divergences;
+}
+
+function executeTrades(divergences, data) {
+    const stopLoss = 0.001;
+    const takeProfit = 0.002;
+    const trades = [];
+
+    divergences.forEach(divergence => {
+        const currentPrice = data[divergence.index].close;
+        let trade;
+        if (divergence.type === 'bullish') {
+            trade = executeTrade('buy', currentPrice, stopLoss, takeProfit);
+        } else if (divergence.type === 'bearish') {
+            trade = executeTrade('sell', currentPrice, stopLoss, takeProfit);
+        }
+        if (trade) {
+            trades.push(trade);
+            activeTrades.push(trade);
+        }
+    });
+
+    return trades;
+}
+
+function executeTrade(signal, currentPrice, stopLoss, takeProfit) {
+    if (signal === 'buy') {
+        const entryPrice = currentPrice;
+        const slPrice = entryPrice - stopLoss;
+        const tpPrice = entryPrice + takeProfit;
+        return { entry: entryPrice, stop_loss: slPrice, take_profit: tpPrice, type: 'buy' };
+    } else if (signal === 'sell') {
+        const entryPrice = currentPrice;
+        const slPrice = entryPrice + stopLoss;
+        const tpPrice = entryPrice - takeProfit;
+        return { entry: entryPrice, stop_loss: slPrice, take_profit: tpPrice, type: 'sell' };
+    }
+    return null;
+}
+
+function visualizePerformanceTable(trades) {
+    const performanceTableContainer = document.getElementById('performance-table');
+    if (performanceTableContainer) {
+        performanceTableContainer.innerHTML = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Entry</th>
+                        <th>Stop Loss</th>
+                        <th>Take Profit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${trades.map(trade => `
+                        <tr>
+                            <td>${trade.type}</td>
+                            <td>${trade.entry.toFixed(5)}</td>
+                            <td>${trade.stop_loss.toFixed(5)}</td>
+                            <td>${trade.take_profit.toFixed(5)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
 }
 
 // Make all exported functions available globally
