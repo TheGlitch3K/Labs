@@ -1,4 +1,4 @@
-let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence'];
+let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence', 'MACD Strategy'];
 let activeStrategy = null;
 
 export function initStrategies() {
@@ -47,6 +47,9 @@ function applyStrategyToChart(strategy) {
         case 'MACD Divergence':
             addMACDDivergence();
             break;
+        case 'MACD Strategy':
+            addMACDStrategy();
+            break;
     }
 }
 
@@ -72,6 +75,13 @@ function addRSIStrategy() {
 
 function addMACDDivergence() {
     console.log('Adding MACD Divergence strategy');
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+    }
+}
+
+function addMACDStrategy() {
+    console.log('Adding MACD Strategy');
     if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
         window.chartFunctions.addChartIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
     }
