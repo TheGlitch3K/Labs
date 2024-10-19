@@ -1,4 +1,4 @@
-let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence', 'MACD Strategy'];
+let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence', 'MACD Strategy', 'Myriad Labs Strategy'];
 let activeStrategy = null;
 
 export function initStrategies() {
@@ -37,19 +37,26 @@ function selectStrategy(strategy) {
 function applyStrategyToChart(strategy) {
     removeExistingStrategyIndicators();
 
-    switch(strategy) {
-        case 'Moving Average Crossover':
-            addMovingAverageCrossover();
-            break;
-        case 'RSI Overbought/Oversold':
-            addRSIStrategy();
-            break;
-        case 'MACD Divergence':
-            addMACDDivergence();
-            break;
-        case 'MACD Strategy':
-            addMACDStrategy();
-            break;
+    try {
+        switch(strategy) {
+            case 'Moving Average Crossover':
+                addMovingAverageCrossover();
+                break;
+            case 'RSI Overbought/Oversold':
+                addRSIStrategy();
+                break;
+            case 'MACD Divergence':
+                addMACDDivergence();
+                break;
+            case 'MACD Strategy':
+                addMACDStrategy();
+                break;
+            case 'Myriad Labs Strategy':
+                addMyriadLabsStrategy();
+                break;
+        }
+    } catch (error) {
+        console.error(`Error applying strategy to chart: ${error.message}`);
     }
 }
 
@@ -85,4 +92,18 @@ function addMACDStrategy() {
     if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
         window.chartFunctions.addChartIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
     }
+}
+
+function addMyriadLabsStrategy() {
+    console.log('Adding Myriad Labs Strategy');
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator('myriadLabs', { param1: 'value1', param2: 'value2' });
+    }
+    // Add logic to display performance table
+    displayPerformanceTable();
+}
+
+function displayPerformanceTable() {
+    console.log('Displaying performance table for Myriad Labs Strategy');
+    // Implement the logic to display the performance table
 }

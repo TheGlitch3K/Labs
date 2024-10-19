@@ -223,6 +223,13 @@ export function addChartIndicator(type, params = {}) {
             });
             // Calculate EMA values
             break;
+        case 'myriadLabs':
+            indicator = chart.addLineSeries({
+                color: 'rgba(0, 255, 0, 1)',
+                lineWidth: 2,
+            });
+            // Calculate Myriad Labs Strategy values
+            break;
         // Add more indicator types as needed
     }
     addIndicator({ type, series: indicator, params });
