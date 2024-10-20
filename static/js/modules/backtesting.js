@@ -50,6 +50,14 @@ class Backtesting {
             averageTrade
         };
     }
+
+    backtest() {
+        this.run();
+        return {
+            trades: this.trades,
+            performanceMetrics: this.performanceMetrics
+        };
+    }
 }
 
 export default Backtesting;

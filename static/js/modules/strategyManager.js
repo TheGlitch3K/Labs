@@ -30,6 +30,12 @@ class StrategyManager {
     getAllStrategies() {
         return this.strategies;
     }
+
+    updateStrategyParams(name, params) {
+        if (this.strategies[name]) {
+            this.strategies[name].params = { ...this.strategies[name].params, ...params };
+        }
+    }
 }
 
 export default new StrategyManager();

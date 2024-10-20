@@ -1,4 +1,3 @@
-// Import necessary functions from other modules
 import { renderUTBotAlerts } from '../indicators/utBotAlerts.js';
 import { renderMyriadLabsStrategy } from '../strategies/myriadLabsStrategy.js';
 
