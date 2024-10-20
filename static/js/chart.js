@@ -1,4 +1,5 @@
 import { addIndicator, removeIndicator, getActiveIndicators as getActiveIndicatorsFromModule, clearActiveIndicators } from './modules/activeIndicators.js';
+import { myriadLabsStrategy } from './strategies/myriadLabsStrategy.js';
 
 let chart;
 let candleSeries;
@@ -8,6 +9,7 @@ let activeDrawingTool = null;
 let drawings = [];
 let currentDrawing = null;
 let drawingStartPoint = null;
+let activeStrategy = null;
 
 export function createChart() {
     const chartContainer = document.getElementById('candlestick-chart');
@@ -77,6 +79,9 @@ export function fetchLatestData() {
                 }));
                 candleSeries.setData(formattedData);
                 updateSymbolInfo(currentSymbol, formattedData[formattedData.length - 1]);
+                if (activeStrategy) {
+                    applyStrategyToChart(activeStrategy);
+                }
             }
         })
         .catch(error => console.error('Error fetching candlestick data:', error));
@@ -253,6 +258,56 @@ export function getActiveIndicators() {
     return getActiveIndicatorsFromModule();
 }
 
+export function applyStrategyToChart(strategy) {
+    activeStrategy = strategy;
+    clearActiveIndicators();
+    const candles = candleSeries.data();
+    const params = {
+        macdParams: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+        sl: 10,
+        tp1: 20,
+        tp2: 30,
+        tp3: 40,
+        trailingSL: true
+    };
+    const strategyData = myriadLabsStrategy(candles, params);
+    plotStrategyData(strategyData);
+}
+
+function plotStrategyData(strategyData) {
+    const { macdData, divergences, trades, performanceMetrics } = strategyData;
+    plotMACDDivergence(macdData, divergences);
+    plotEntryExitPoints(trades);
+    plotSLTPLevels(trades);
+    plotPerformanceTable(performanceMetrics);
+}
+
+function plotPerformanceTable(performanceMetrics) {
+    const performanceTable = document.getElementById('performance-table');
+    if (performanceTable) {
+        performanceTable.innerHTML = `
+            <tr><td>Net Profit</td><td>${performanceMetrics.netProfit}</td></tr>
+            <tr><td>Total Trades Closed</td><td>${performanceMetrics.totalTradesClosed}</td></tr>
+            <tr><td>Percent Profitable</td><td>${performanceMetrics.percentProfitable}%</td></tr>
+            <tr><td>Profit Factor</td><td>${performanceMetrics.profitFactor}</td></tr>
+            <tr><td>Max Drawdown</td><td>${performanceMetrics.maxDrawdown}</td></tr>
+            <tr><td>Average Trade</td><td>${performanceMetrics.averageTrade}</td></tr>
+        `;
+    }
+}
+
+function plotMACDDivergence(macdData, divergences) {
+    // Implement MACD divergence plotting logic
+}
+
+function plotEntryExitPoints(trades) {
+    // Implement entry and exit points plotting logic
+}
+
+function plotSLTPLevels(trades) {
+    // Implement SL and TP levels plotting logic
+}
+
 // Make all exported functions available globally
 window.chartFunctions = {
     createChart,
@@ -267,5 +322,6 @@ window.chartFunctions = {
     addChartIndicator,
     removeChartIndicator,
     adjustChartSize,
-    getActiveIndicators
+    getActiveIndicators,
+    applyStrategyToChart
 };
