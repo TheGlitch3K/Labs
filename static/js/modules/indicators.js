@@ -26,6 +26,7 @@ function initializeIndicatorsModal() {
         { name: 'Bollinger Bands', category: 'volatility' },
         { name: 'Average True Range', category: 'volatility' },
         { name: 'On-Balance Volume', category: 'volume' },
+        { name: 'MyriadLabs', category: 'momentum' },
     ];
 
     function renderIndicators(filteredIndicators) {
@@ -78,9 +79,20 @@ function addIndicator(indicatorName) {
     if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
         window.chartFunctions.addChartIndicator(indicatorName);
     }
+    if (indicatorName === 'MyriadLabs') {
+        applyMyriadLabsStrategy();
+    }
 }
 
 function toggleFavorite(button) {
     button.classList.toggle('active');
     // Implement the logic to save favorite indicators
+}
+
+function applyMyriadLabsStrategy() {
+    console.log('Applying MyriadLabs Strategy');
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+        // Add more indicators and logic specific to MyriadLabs strategy
+    }
 }

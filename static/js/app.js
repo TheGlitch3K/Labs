@@ -2,7 +2,7 @@ import { initTheme } from './modules/theme.js';
 import { initSidebar } from './modules/sidebar.js';
 import { initWatchlist } from './modules/watchlist.js';
 import { initAIAssistant } from './modules/aiAssistant.js';
-import { initStrategies } from './modules/strategies.js';
+import { initStrategies, applyMyriadLabsStrategy } from './modules/strategies.js';
 import { initIndicators } from './modules/indicators.js';
 import { initChartControls } from './modules/chartControls.js';
 import * as chartFunctions from './chart.js';
@@ -34,4 +34,12 @@ document.addEventListener('DOMContentLoaded', () => {
             chartFunctions.adjustChartSize();
         }
     });
+
+    // Add event listener for the "Add" button next to MyriadLabs option
+    const addMyriadLabsBtn = document.getElementById('add-myriadlabs-btn');
+    if (addMyriadLabsBtn) {
+        addMyriadLabsBtn.addEventListener('click', () => {
+            applyMyriadLabsStrategy();
+        });
+    }
 });
