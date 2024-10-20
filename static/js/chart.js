@@ -11,56 +11,60 @@ let drawingStartPoint = null;
 
 export function createChart() {
     const chartContainer = document.getElementById('candlestick-chart');
-    chart = LightweightCharts.createChart(chartContainer, {
-        width: chartContainer.offsetWidth,
-        height: chartContainer.offsetHeight,
-        layout: {
-            backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart-bg').trim(),
-            textColor: getComputedStyle(document.body).getPropertyValue('--text-color').trim(),
-        },
-        grid: {
-            vertLines: { color: 'rgba(197, 203, 206, 0.5)' },
-            horzLines: { color: 'rgba(197, 203, 206, 0.5)' },
-        },
-        crosshair: {
-            mode: LightweightCharts.CrosshairMode.Normal,
-        },
-        rightPriceScale: {
-            borderColor: 'rgba(197, 203, 206, 0.8)',
-        },
-        timeScale: {
-            borderColor: 'rgba(197, 203, 206, 0.8)',
-            timeVisible: true,
-            secondsVisible: false,
-        },
-    });
+    try {
+        chart = LightweightCharts.createChart(chartContainer, {
+            width: chartContainer.offsetWidth,
+            height: chartContainer.offsetHeight,
+            layout: {
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart-bg').trim(),
+                textColor: getComputedStyle(document.body).getPropertyValue('--text-color').trim(),
+            },
+            grid: {
+                vertLines: { color: 'rgba(197, 203, 206, 0.5)' },
+                horzLines: { color: 'rgba(197, 203, 206, 0.5)' },
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            rightPriceScale: {
+                borderColor: 'rgba(197, 203, 206, 0.8)',
+            },
+            timeScale: {
+                borderColor: 'rgba(197, 203, 206, 0.8)',
+                timeVisible: true,
+                secondsVisible: false,
+            },
+        });
 
-    candleSeries = chart.addCandlestickSeries({
-        upColor: '#26a69a',
-        downColor: '#ef5350',
-        borderVisible: false,
-        wickUpColor: '#26a69a',
-        wickDownColor: '#ef5350',
-    });
+        candleSeries = chart.addCandlestickSeries({
+            upColor: '#26a69a',
+            downColor: '#ef5350',
+            borderVisible: false,
+            wickUpColor: '#26a69a',
+            wickDownColor: '#ef5350',
+        });
 
-    chart.subscribeCrosshairMove(param => {
-        if (param.time) {
-            const data = param.seriesData.get(candleSeries);
-            if (data) {
-                const symbolInfo = document.getElementById('symbol-info');
-                symbolInfo.innerHTML = `O: ${data.open.toFixed(5)} H: ${data.high.toFixed(5)} L: ${data.low.toFixed(5)} C: ${data.close.toFixed(5)}`;
+        chart.subscribeCrosshairMove(param => {
+            if (param.time) {
+                const data = param.seriesData.get(candleSeries);
+                if (data) {
+                    const symbolInfo = document.getElementById('symbol-info');
+                    symbolInfo.innerHTML = `O: ${data.open.toFixed(5)} H: ${data.high.toFixed(5)} L: ${data.low.toFixed(5)} C: ${data.close.toFixed(5)}`;
+                }
             }
-        }
-    });
+        });
 
-    chart.timeScale().fitContent();
+        chart.timeScale().fitContent();
 
-    chartContainer.addEventListener('mousedown', handleMouseDown);
-    chartContainer.addEventListener('mousemove', handleMouseMove);
-    chartContainer.addEventListener('mouseup', handleMouseUp);
-    chartContainer.addEventListener('contextmenu', handleContextMenu);
+        chartContainer.addEventListener('mousedown', handleMouseDown);
+        chartContainer.addEventListener('mousemove', handleMouseMove);
+        chartContainer.addEventListener('mouseup', handleMouseUp);
+        chartContainer.addEventListener('contextmenu', handleContextMenu);
 
-    fetchLatestData();
+        fetchLatestData();
+    } catch (error) {
+        console.error('Error initializing chart:', error);
+    }
 }
 
 export function fetchLatestData() {
