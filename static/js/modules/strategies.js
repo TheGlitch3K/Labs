@@ -1,3 +1,5 @@
+import { myriadLabsStrategy } from '../strategies/myriadLabsStrategy.js';
+
 let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence', 'MACD Strategy', 'Myriad Labs Strategy'];
 let activeStrategy = null;
 
@@ -92,7 +94,23 @@ function addMACDStrategy() {
 
 function addMyriadLabsStrategy() {
     console.log('Adding Myriad Labs Strategy');
-    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
-        window.chartFunctions.addChartIndicator('myriadLabs', { param1: 'value1', param2: 'value2' });
-    }
+    const candles = window.chartFunctions.getCandles();
+    const params = {
+        macdParams: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+        sl: 10,
+        tp1: 20,
+        tp2: 30,
+        tp3: 40,
+        trailingSL: true
+    };
+    const strategyData = myriadLabsStrategy(candles, params);
+    plotStrategyData(strategyData);
+}
+
+function plotStrategyData(strategyData) {
+    const { macdData, divergences, trades, performanceMetrics } = strategyData;
+    plotMACDDivergence(macdData, divergences);
+    plotEntryExitPoints(trades);
+    plotSLTPLevels(trades);
+    plotPerformanceTable(performanceMetrics);
 }

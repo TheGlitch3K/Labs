@@ -34,4 +34,27 @@ document.addEventListener('DOMContentLoaded', () => {
             chartFunctions.adjustChartSize();
         }
     });
+
+    // Add event listener for MyriadLabs strategy settings
+    document.getElementById('apply-myriadlabs-settings').addEventListener('click', () => {
+        const macdFastPeriod = parseInt(document.getElementById('macd-fast-period').value);
+        const macdSlowPeriod = parseInt(document.getElementById('macd-slow-period').value);
+        const macdSignalPeriod = parseInt(document.getElementById('macd-signal-period').value);
+        const stopLoss = parseInt(document.getElementById('stop-loss').value);
+        const takeProfit1 = parseInt(document.getElementById('take-profit-1').value);
+        const takeProfit2 = parseInt(document.getElementById('take-profit-2').value);
+        const takeProfit3 = parseInt(document.getElementById('take-profit-3').value);
+        const trailingStopLoss = document.getElementById('trailing-stop-loss').checked;
+
+        const params = {
+            macdParams: { fastPeriod: macdFastPeriod, slowPeriod: macdSlowPeriod, signalPeriod: macdSignalPeriod },
+            sl: stopLoss,
+            tp1: takeProfit1,
+            tp2: takeProfit2,
+            tp3: takeProfit3,
+            trailingSL: trailingStopLoss
+        };
+
+        chartFunctions.applyStrategyToChart('Myriad Labs Strategy', params);
+    });
 });
