@@ -1,5 +1,5 @@
 import { addIndicator, removeIndicator, getActiveIndicators as getActiveIndicatorsFromModule, clearActiveIndicators } from './modules/activeIndicators.js';
-import { myriadLabsStrategy } from './strategies/myriadLabsStrategy.js';
+import { myriadLabsStrategy, renderMyriadLabsStrategy } from './strategies/myriadLabsStrategy.js';
 
 let chart;
 let candleSeries;
@@ -22,7 +22,7 @@ export function createChart() {
         },
         grid: {
             vertLines: { color: 'rgba(197, 203, 206, 0.5)' },
-            horzLines: { color: 'rgba(197, 203, 206, 5)' },
+            horzLines: { color: 'rgba(197, 203, 206, 0.5)' },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
@@ -258,54 +258,62 @@ export function getActiveIndicators() {
     return getActiveIndicatorsFromModule();
 }
 
-export function applyStrategyToChart(strategy) {
+export function applyStrategyToChart(strategy, params) {
     activeStrategy = strategy;
     clearActiveIndicators();
     const candles = candleSeries.data();
-    const params = {
-        macdParams: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
-        sl: 10,
-        tp1: 20,
-        tp2: 30,
-        tp3: 40,
-        trailingSL: true
-    };
-    const strategyData = myriadLabsStrategy(candles, params);
-    plotStrategyData(strategyData);
+    if (strategy === 'Myriad Labs Strategy') {
+        const strategyResult = renderMyriadLabsStrategy(chart, candleSeries, candles, params);
+        // Store the strategy result for later use if needed
+        window.currentStrategyResult = strategyResult;
+        updatePerformanceTable(strategyResult.trades);
+    }
 }
 
-function plotStrategyData(strategyData) {
-    const { macdData, divergences, trades, performanceMetrics } = strategyData;
-    plotMACDDivergence(macdData, divergences);
-    plotEntryExitPoints(trades);
-    plotSLTPLevels(trades);
-    plotPerformanceTable(performanceMetrics);
-}
-
-function plotPerformanceTable(performanceMetrics) {
+function updatePerformanceTable(trades) {
+    const performanceMetrics = calculatePerformanceMetrics(trades);
     const performanceTable = document.getElementById('performance-table');
     if (performanceTable) {
         performanceTable.innerHTML = `
-            <tr><td>Net Profit</td><td>${performanceMetrics.netProfit}</td></tr>
-            <tr><td>Total Trades Closed</td><td>${performanceMetrics.totalTradesClosed}</td></tr>
-            <tr><td>Percent Profitable</td><td>${performanceMetrics.percentProfitable}%</td></tr>
-            <tr><td>Profit Factor</td><td>${performanceMetrics.profitFactor}</td></tr>
-            <tr><td>Max Drawdown</td><td>${performanceMetrics.maxDrawdown}</td></tr>
-            <tr><td>Average Trade</td><td>${performanceMetrics.averageTrade}</td></tr>
+            <tr><td>Net Profit</td><td>${performanceMetrics.netProfit.toFixed(2)}</td></tr>
+            <tr><td>Total Trades</td><td>${performanceMetrics.totalTrades}</td></tr>
+            <tr><td>Win Rate</td><td>${performanceMetrics.winRate.toFixed(2)}%</td></tr>
+            <tr><td>Profit Factor</td><td>${performanceMetrics.profitFactor.toFixed(2)}</td></tr>
+            <tr><td>Max Drawdown</td><td>${performanceMetrics.maxDrawdown.toFixed(2)}</td></tr>
+            <tr><td>Avg Trade</td><td>${performanceMetrics.avgTrade.toFixed(2)}</td></tr>
         `;
     }
 }
 
-function plotMACDDivergence(macdData, divergences) {
-    // Implement MACD divergence plotting logic
-}
+function calculatePerformanceMetrics(trades) {
+    let netProfit = 0;
+    let winningTrades = 0;
+    let totalProfit = 0;
+    let totalLoss = 0;
+    let maxDrawdown = 0;
+    let peak = 0;
 
-function plotEntryExitPoints(trades) {
-    // Implement entry and exit points plotting logic
-}
+    trades.forEach(trade => {
+        const profit = trade.exit ? trade.exit - trade.entry : 0;
+        netProfit += profit;
+        if (profit > 0) {
+            winningTrades++;
+            totalProfit += profit;
+        } else {
+            totalLoss -= profit;
+        }
+        peak = Math.max(peak, netProfit);
+        maxDrawdown = Math.max(maxDrawdown, peak - netProfit);
+    });
 
-function plotSLTPLevels(trades) {
-    // Implement SL and TP levels plotting logic
+    return {
+        netProfit,
+        totalTrades: trades.length,
+        winRate: (winningTrades / trades.length) * 100,
+        profitFactor: totalLoss !== 0 ? totalProfit / totalLoss : Infinity,
+        maxDrawdown,
+        avgTrade: netProfit / trades.length
+    };
 }
 
 // Make all exported functions available globally

@@ -153,22 +153,62 @@
                 <span class="close">&times;</span>
             </div>
             <div id="myriadlabs-settings-form">
+                <label for="sltp-mode">SL & TP Mode:</label>
+                <select id="sltp-mode">
+                    <option value="Fixed">Fixed</option>
+                    <option value="Trailing">Trailing</option>
+                </select>
+                <label for="max-sl-offset">Max SL Offset%:</label>
+                <input type="number" id="max-sl-offset" value="3" step="0.1" min="0">
+                <label for="open-pos-with-max-sl">Open Position with Max SL Offset:</label>
+                <input type="checkbox" id="open-pos-with-max-sl">
+                <label for="tp1-ratio">TP1 Ratio:</label>
+                <input type="number" id="tp1-ratio" value="1" step="0.1" min="0">
+                <label for="tp1-share">TP1 Share:</label>
+                <input type="number" id="tp1-share" value="100" step="1" min="0" max="100">
+                <label for="tp2-ratio">TP2 Ratio:</label>
+                <input type="number" id="tp2-ratio" value="2" step="0.1" min="0">
+                <label for="tp2-share">TP2 Share:</label>
+                <input type="number" id="tp2-share" value="25" step="1" min="0" max="100">
+                <label for="tp3-ratio">TP3 Ratio:</label>
+                <input type="number" id="tp3-ratio" value="3" step="0.1" min="0">
+                <label for="tp3-share">TP3 Share:</label>
+                <input type="number" id="tp3-share" value="25" step="1" min="0" max="100">
+                <label for="move-fwd-fsl">Keep Fixed SL One Step Behind the TP:</label>
+                <select id="move-fwd-fsl">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
                 <label for="macd-fast-period">MACD Fast Period:</label>
-                <input type="number" id="macd-fast-period" name="macd-fast-period" value="12">
+                <input type="number" id="macd-fast-period" value="12" step="1" min="1">
                 <label for="macd-slow-period">MACD Slow Period:</label>
-                <input type="number" id="macd-slow-period" name="macd-slow-period" value="26">
+                <input type="number" id="macd-slow-period" value="26" step="1" min="1">
                 <label for="macd-signal-period">MACD Signal Period:</label>
-                <input type="number" id="macd-signal-period" name="macd-signal-period" value="9">
-                <label for="stop-loss">Stop Loss:</label>
-                <input type="number" id="stop-loss" name="stop-loss" value="10">
-                <label for="take-profit-1">Take Profit 1:</label>
-                <input type="number" id="take-profit-1" name="take-profit-1" value="20">
-                <label for="take-profit-2">Take Profit 2:</label>
-                <input type="number" id="take-profit-2" name="take-profit-2" value="30">
-                <label for="take-profit-3">Take Profit 3:</label>
-                <input type="number" id="take-profit-3" name="take-profit-3" value="40">
-                <label for="trailing-stop-loss">Trailing Stop Loss:</label>
-                <input type="checkbox" id="trailing-stop-loss" name="trailing-stop-loss">
+                <input type="number" id="macd-signal-period" value="9" step="1" min="1">
+                <label for="div-res">Divergence Timeframe:</label>
+                <input type="text" id="div-res" value="240">
+                <label for="div-pivot-src">Pivot Source:</label>
+                <select id="div-pivot-src">
+                    <option value="Close">Close</option>
+                    <option value="High/Low">High/Low</option>
+                </select>
+                <label for="div-pivot-leftbars">Pivot Left Bars:</label>
+                <input type="number" id="div-pivot-leftbars" value="5" min="1" max="50">
+                <label for="div-pivot-rightbars">Pivot Right Bars:</label>
+                <input type="number" id="div-pivot-rightbars" value="5" min="1" max="50">
+                <label for="div-pivot-lookback">Lookback:</label>
+                <input type="number" id="div-pivot-lookback" value="100" min="30" max="300">
+                <label for="div-pivot-check">Pivot points to check:</label>
+                <input type="number" id="div-pivot-check" value="10" min="1" max="20">
+                <label for="div-plot">Show Divergence Lines:</label>
+                <select id="div-plot">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+                <label for="div-pos-color">Positive Divergence Color:</label>
+                <input type="color" id="div-pos-color" value="#ffeb3b">
+                <label for="div-neg-color">Negative Divergence Color:</label>
+                <input type="color" id="div-neg-color" value="#ff9900">
             </div>
             <button id="apply-myriadlabs-settings">Apply Settings</button>
         </div>

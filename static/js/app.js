@@ -37,22 +37,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add event listener for MyriadLabs strategy settings
     document.getElementById('apply-myriadlabs-settings').addEventListener('click', () => {
-        const macdFastPeriod = parseInt(document.getElementById('macd-fast-period').value);
-        const macdSlowPeriod = parseInt(document.getElementById('macd-slow-period').value);
-        const macdSignalPeriod = parseInt(document.getElementById('macd-signal-period').value);
-        const stopLoss = parseInt(document.getElementById('stop-loss').value);
-        const takeProfit1 = parseInt(document.getElementById('take-profit-1').value);
-        const takeProfit2 = parseInt(document.getElementById('take-profit-2').value);
-        const takeProfit3 = parseInt(document.getElementById('take-profit-3').value);
-        const trailingStopLoss = document.getElementById('trailing-stop-loss').checked;
-
         const params = {
-            macdParams: { fastPeriod: macdFastPeriod, slowPeriod: macdSlowPeriod, signalPeriod: macdSignalPeriod },
-            sl: stopLoss,
-            tp1: takeProfit1,
-            tp2: takeProfit2,
-            tp3: takeProfit3,
-            trailingSL: trailingStopLoss
+            sltpmode: document.getElementById('sltp-mode').value,
+            maxFslOfst: parseFloat(document.getElementById('max-sl-offset').value),
+            openPosWithMaxSL: document.getElementById('open-pos-with-max-sl').checked,
+            tp1Ratio: parseFloat(document.getElementById('tp1-ratio').value),
+            tp1Share: parseFloat(document.getElementById('tp1-share').value),
+            tp2Ratio: parseFloat(document.getElementById('tp2-ratio').value),
+            tp2Share: parseFloat(document.getElementById('tp2-share').value),
+            tp3Ratio: parseFloat(document.getElementById('tp3-ratio').value),
+            tp3Share: parseFloat(document.getElementById('tp3-share').value),
+            moveFwdFSL: document.getElementById('move-fwd-fsl').value === 'Yes',
+            macdParams: {
+                fastPeriod: parseInt(document.getElementById('macd-fast-period').value),
+                slowPeriod: parseInt(document.getElementById('macd-slow-period').value),
+                signalPeriod: parseInt(document.getElementById('macd-signal-period').value),
+            },
+            div_res: document.getElementById('div-res').value,
+            div_pivot_src: document.getElementById('div-pivot-src').value,
+            div_pivot_leftbars: parseInt(document.getElementById('div-pivot-leftbars').value),
+            div_pivot_rightbars: parseInt(document.getElementById('div-pivot-rightbars').value),
+            div_pivot_lookBackLen: parseInt(document.getElementById('div-pivot-lookback').value),
+            div_pivot_howManyToCheck: parseInt(document.getElementById('div-pivot-check').value),
+            div_plot: document.getElementById('div-plot').value === 'Yes',
+            div_posColr: document.getElementById('div-pos-color').value,
+            div_negColr: document.getElementById('div-neg-color').value
         };
 
         chartFunctions.applyStrategyToChart('Myriad Labs Strategy', params);

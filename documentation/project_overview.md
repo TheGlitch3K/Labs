@@ -1,38 +1,5 @@
-# Project Code Overview
 
-Generated on: Fri Sep 27 06:51:25 CDT 2024
-
-## Table of Contents
-
-- [./config/settings.py](#file---config-settings-py)
-- [./main.py](#file---main-py)
-- [./noteToSelf.md](#file---noteToSelf-md)
-- [./requirements.txt](#file---requirements-txt)
-- [./src/ai/ai_client.py](#file---src-ai-ai-client-py)
-- [./src/ai_client.py](#file---src-ai-client-py)
-- [./src/data/data_fetcher.py](#file---src-data-data-fetcher-py)
-- [./src/routes/api_routes.py](#file---src-routes-api-routes-py)
-- [./src/routes/main_routes.py](#file---src-routes-main-routes-py)
-- [./static/css/ai-chat.css](#file---static-css-ai-chat-css)
-- [./static/css/chart.css](#file---static-css-chart-css)
-- [./static/css/components.css](#file---static-css-components-css)
-- [./static/css/layout.css](#file---static-css-layout-css)
-- [./static/css/main.css](#file---static-css-main-css)
-- [./static/css/modal.css](#file---static-css-modal-css)
-- [./static/css/responsive.css](#file---static-css-responsive-css)
-- [./static/css/sidebar.css](#file---static-css-sidebar-css)
-- [./static/css/variables.css](#file---static-css-variables-css)
-- [./static/css/watchlist.css](#file---static-css-watchlist-css)
-- [./static/js/app.js](#file---static-js-app-js)
-- [./static/js/chart.js](#file---static-js-chart-js)
-- [./static/js/modules/chartControls.js](#file---static-js-modules-chartControls-js)
-- [./static/js/modules/chat.js](#file---static-js-modules-chat-js)
-- [./static/js/modules/indicators.js](#file---static-js-modules-indicators-js)
-- [./static/js/modules/sidebar.js](#file---static-js-modules-sidebar-js)
-- [./static/js/modules/strategies.js](#file---static-js-modules-strategies-js)
-- [./static/js/modules/theme.js](#file---static-js-modules-theme-js)
-- [./static/js/modules/watchlist.js](#file---static-js-modules-watchlist-js)
-- [./templates/index.html](#file---templates-index-html)
+```
 
 ## File: ./config/settings.py {#file---config-settings-py}
 
@@ -84,129 +51,515 @@ def create_app():
     app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
     # Initialize services
-    data_fetcher = OandaDataFetcher(api_key=app.config['OANDA_API_KEY'])
-    ai_client = AIClient(api_key=app.config['OPENAI_API_KEY'])
+    app.data_fetcher = OandaDataFetcher(api_key=app.config['OANDA_API_KEY'])
+    app.ai_client = AIClient()
 
     # Register blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
 
-    # Add data_fetcher and ai_client to app context
-    app.data_fetcher = data_fetcher
-    app.ai_client = ai_client
-
     return app
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(debug=True)```
+    app.run(debug=True)
+```
 
 ## File: ./noteToSelf.md {#file---noteToSelf-md}
 
-```markdown
-/////////#CREATE PROJECT.MD://///////////  cat << 'EOF' > create_project_md.sh
-#!/bin/bash
 
-set -e
 
-# Configuration
-OUTPUT_DIR="documentation"
-OUTPUT_FILE="$OUTPUT_DIR/project_overview.md"
-MAX_FILE_SIZE_KB=1000
-EXCLUDE_DIRS=(".git" "node_modules" "venv" "__pycache__" "$OUTPUT_DIR")
-EXCLUDE_FILES=("create_project_md.sh")
+## File: ./pinescriptIndicator.txt {#file---pinescriptIndicator-txt}
 
-# Create the output directory
-mkdir -p "$OUTPUT_DIR"
+```plaintext
+The following strategy needs to be implemented so that I can apply it to the chart in my application.
 
-# Function to escape special characters for Markdown code blocks
-escape_markdown() {
-    sed 's/\`\`\`/\\`\\`\\`/g'
-}
+//Copyright Myriadlabs
 
-# Function to determine the language for syntax highlighting
-get_language() {
-    case "$1" in
-        py) echo "python" ;;
-        js) echo "javascript" ;;
-        html) echo "html" ;;
-        css) echo "css" ;;
-        sh) echo "bash" ;;
-        md) echo "markdown" ;;
-        json) echo "json" ;;
-        yml|yaml) echo "yaml" ;;
-        Dockerfile) echo "dockerfile" ;;
-        *) echo "plaintext" ;;
-    esac
-}
+//@version=5
 
-# Function to check if a file should be excluded
-should_exclude() {
-    local file="$1"
+///// Table Visibility Input
+show_table = input.bool(true, title = "Show Performance Table", group = "Table Settings")
+
+// Input for table text color
+table_text_color = input.color(color.white, title = "Table Text Color", group = "Table Settings")
+
+
+// Create Performance Table
+var table performanceTable = table.new(position.bottom_left, 7, 2) // 6 rows and 2 columns for metrics and their values
+table.set_bgcolor(performanceTable, color.new(color.gray, 90))
+table.set_border_color(performanceTable, color.new(color.white, 90))
+table.set_border_width(performanceTable, 1)
+
+// Define strategy variables and metrics
+var float net_profit = 0.0
+var float max_equity = 0.0
+var float max_drawdown = 0.0
+var float gross_profit = 0.0
+var float gross_loss = 0.0
+var int total_trades_closed = 0
+var int winning_trades = 0
+var float avg_trade = 0.0 // Added this line to declare avg_trade
+
+// Update metrics based on strategy's trade information
+if (strategy.position_size[1] != 0 and strategy.position_size == 0) 
+    total_trades_closed += 1
+    float trade_profit = strategy.closedtrades.profit(strategy.closedtrades-1)
+    net_profit += trade_profit
+    if trade_profit > 0 
+        winning_trades += 1
+        gross_profit += trade_profit
+    else 
+        gross_loss -= trade_profit
     
-    # Check if file is in EXCLUDE_FILES
-    for exclude in "${EXCLUDE_FILES[@]}"; do
-        [[ "$(basename "$file")" == "$exclude" ]] && return 0
-    done
+    max_equity := math.max(max_equity, net_profit)
+    float current_drawdown = max_equity - net_profit
+    max_drawdown := math.max(max_drawdown, current_drawdown)
+
+    avg_trade := net_profit / total_trades_closed // Calculate average trade
+
+// Calculate derived metrics
+float percent_profitable = total_trades_closed > 0 ? (winning_trades / total_trades_closed) * 100 : 0
+float profit_factor = gross_loss > 0 ? gross_profit / gross_loss : na
+
+
+// Populate the table cells with two decimal places formatting
+if show_table
+    table.cell(performanceTable, 0, 0, "Net Profit")
+    table.cell(performanceTable, 0, 1, str.format("{0,number,0.00}", net_profit))
+    table.cell(performanceTable, 1, 0, "Total Trades Closed")
+    table.cell(performanceTable, 1, 1, str.tostring(total_trades_closed))
+    table.cell(performanceTable, 2, 0, "Percent Profitable")
+    table.cell(performanceTable, 2, 1, str.format("{0,number,0.00}", percent_profitable) + "%")
+    table.cell(performanceTable, 3, 0, "Profit Factor")
+    table.cell(performanceTable, 3, 1, na(profit_factor) ? "na" : str.format("{0,number,0.00}", profit_factor))
+    table.cell(performanceTable, 4, 0, "Max Drawdown")
+    table.cell(performanceTable, 4, 1, str.format("{0,number,0.00}", max_drawdown))
+    table.cell(performanceTable, 5, 0, "Avg Trade")
+    table.cell(performanceTable, 5, 1, str.format("{0,number,0.00}", avg_trade))
+
+// Apply text color to table cells
+    table.cell_set_text_color(performanceTable, 0, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 0, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 1, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 1, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 2, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 2, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 3, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 3, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 4, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 4, 1, table_text_color)
+    table.cell_set_text_color(performanceTable, 5, 0, table_text_color)
+    table.cell_set_text_color(performanceTable, 5, 1, table_text_color)
+
+strategy("MyriadLabs", overlay = true, max_lines_count = 500, max_labels_count = 500, process_orders_on_close = true, calc_on_order_fills = true)
+inx = bar_index
+
+
+//#region type
+//                  Type                    //
+type setupx
+    bool  position_is_long
+    bool  position_is_short
     
-    # Check if file is in an excluded directory
-    for dir in "${EXCLUDE_DIRS[@]}"; do
-        [[ "$file" == *"/$dir/"* || "$file" == *"$dir/"* ]] && return 0
-    done
+    int   entry_time
+    int   entry_bar_index
+    int   exit_bar_index = 0
     
-    # Check file size
-    local size=$(du -k "$file" | cut -f1)
-    [[ $size -gt $MAX_FILE_SIZE_KB ]] && return 0
+    float entry_price
+    float position_size
+    float risk
+    float sl
+    float tp1
+    float tp2
+    float tp3
+    float hh
+    float ll
+    float RR
+
+var setup = setupx.new()
+//#endregion
+
+
+
+//#region input
+sltpmode         = input.string('Fixed', title = 'SL & TP Mode', options = ['Fixed', 'Trailing']              , group = 'SL & TP')
+maxFslOfst       = input.float (3      , title = 'Max SL Offset%', minval = 0.00001                                  , group = 'SL & TP')
+openPosWithMaxSL = input.bool  (false  , title = 'If the Offset Exceeded Max Limit, Open Position with Max SL Offset', group = 'SL & TP')
+
+tp1Ratio = input.float(1,  title = '1.    RR', minval = 0, maxval = 100, inline = '1', group = 'SL & TP')
+tp1Share = input.float(100, title = 'Share',    minval = 0, maxval = 100, inline = '1', group = 'SL & TP')
+tp2Ratio = input.float(2,  title = '2.    RR', minval = 0, maxval = 100, inline = '2', group = 'SL & TP')
+tp2Share = input.float(25, title = 'Share',    minval = 0, maxval = 100, inline = '2', group = 'SL & TP')
+tp3Ratio = input.float(3,  title = '3.    RR', minval = 0, maxval = 100, inline = '3', group = 'SL & TP')
+tp3Share = input.float(25, title = 'Share',    minval = 0, maxval = 100, inline = '3', group = 'SL & TP')
+moveFwdFSL = input.string('No', title = 'Keep Fixed SL One Step Behind the TP', options = ['Yes', 'No'], group = 'SL & TP') == 'Yes'
+
+
+macdSrc = input.source(close, title = 'Source', group = 'MACD')
+macdFastLen = input.int(12, title = 'Fast Length', group = 'MACD')
+macdSlowLen = input.int(26, title = 'Slow Length', group = 'MACD')
+macdSigLen = input.int(9, title = 'Signal Length', group = 'MACD')
+
+
+div_res = input.timeframe('240', title = 'Timeframe', group = 'Divergence detector')
+div_pivot_src = input.string('Close', title = 'Pivot source', options = ['Close', 'High/Low'], group = 'Divergence detector')
+div_pivot_leftbars = input.int(5, title = 'Pivot Left Bars', minval = 1, maxval = 50, group = 'Divergence detector')
+div_pivot_rightbars = input.int(5, title = 'Pivot Right Bars', minval = 1, maxval = 50, group = 'Divergence detector')
+div_pivot_lookBackLen = input.int(100, title = 'Lookback', minval = 30, maxval = 300, group = 'Divergence detector')
+div_pivot_howManyToCheck = input.int(10, title = 'Pivot points to check', minval = 1, maxval = 20, group = 'Divergence detector')
+div_plot = input.string('Yes', title = 'Show Divergence Lines', options = ['Yes', 'No'], group = 'Divergence detector') == 'Yes'
+
+div_posColr = input.color(color.new(#ffeb3b, 0), title = 'Positive Regular', inline = 'reg div colr', group = 'Divergence detector')
+div_negColr = input.color(color.new(#ff9900, 0), title = 'Negative Regular', inline = 'reg div colr', group = 'Divergence detector')
+
+
+// alertOnDiv   = input.bool(true, title = 'New Divergence', group = 'Alerts')
+// alertOnBreak = input.bool(true, title = 'BreakUp|BreakDown', group = 'Alerts')
+
+// PineConnector Settings
+var g_pc        = "PineConnector Settings"
+pc_id           = input.string(title="License ID", defval="YOUR_ID", group=g_pc, tooltip="This is your PineConnector license ID")
+pc_risk         = input.float(title="Risk Per Trade", defval=1, step=0.5, group=g_pc, tooltip="This is how much to risk per trade (% of balance or lots)")
+pc_prefix       = input.string(title="MetaTrader Prefix", defval="", group=g_pc, tooltip="This is your broker's MetaTrader symbol prefix")
+pc_suffix       = input.string(title="MetaTrader Suffix", defval="", group=g_pc, tooltip="This is your broker's MetaTrader symbol suffix")
+
+// Generate PineConnector alert string
+var symbol = pc_prefix + syminfo.ticker + pc_suffix
+pc_entry_alert(direction, sl, tp) =>
+    pc_id + "," + direction + "," + symbol + "," + "sl=" + str.tostring(sl) + ",tp=" + str.tostring(tp) + ",risk=" + str.tostring(pc_risk)
+
+//#endregion
+
+
+//#region function
+method entry(setupx this, string msg) =>
+    this.entry_time       := time
+    this.entry_bar_index  := bar_index
+    this.entry_price      := close
+    this.risk             := this.entry_price - this.sl
+    this.tp1              := this.entry_price + tp1Ratio * this.risk
+    if this.position_is_long
+        strategy.entry('L.En', strategy.long,  comment = msg)
+        // Generate PineConnector alert syntax & Send alert to webhook
+        pc_alert = pc_entry_alert("buy", this.sl, this.tp1)
+        alert(pc_alert, freq=alert.freq_once_per_bar_close)
+    if this.position_is_short
+        strategy.entry('S.En', strategy.short, comment = msg)
+        // Generate PineConnector alert syntax & Send alert to webhook
+        pc_alert = pc_entry_alert("sell", this.sl, this.tp1)
+        alert(pc_alert, freq=alert.freq_once_per_bar_close)
+
+
+method move_fwd_fsl(setupx this) =>
+    if bar_index > this.entry_bar_index
+        this.tp1 := this.entry_price + tp1Ratio * this.risk
+        this.tp2 := this.entry_price + tp2Ratio * this.risk
+        this.tp3 := this.entry_price + tp3Ratio * this.risk
+
+        if this.position_is_long
+            this.hh := math.max(high, this.hh)
+            this.RR := math.floor((this.hh - this.entry_price) / this.risk)
+            this.sl := math.max(this.sl, this.entry_price + (this.RR - 1) * this.risk)
+            strategy.exit('L.Ex1', 'L.En', stop = this.sl, limit = this.tp1, qty_percent = tp1Share, comment_loss = 'SL', comment_profit = 'TP1')
+            strategy.exit('L.Ex2', 'L.En', stop = this.sl, limit = this.tp2, qty_percent = tp2Share, comment_loss = 'SL', comment_profit = 'TP2')
+            strategy.exit('L.Ex3', 'L.En', stop = this.sl, limit = this.tp3, qty_percent = tp3Share, comment_loss = 'SL', comment_profit = 'TP3')
+        if this.position_is_short
+            this.ll := math.min(low, this.ll)
+            this.RR := math.floor((this.ll - this.entry_price) / this.risk)
+            this.sl := math.min(this.sl, this.entry_price + (this.RR - 1) * this.risk)
+            strategy.exit('S.Ex1', 'S.En', stop = this.sl, limit = this.tp1, qty_percent = tp1Share, comment_loss = 'SL', comment_profit = 'TP1')
+            strategy.exit('S.Ex2', 'S.En', stop = this.sl, limit = this.tp2, qty_percent = tp2Share, comment_loss = 'SL', comment_profit = 'TP2')
+            strategy.exit('S.Ex3', 'S.En', stop = this.sl, limit = this.tp3, qty_percent = tp3Share, comment_loss = 'SL', comment_profit = 'TP3')
+
+
+method set_tp(setupx this) =>
+    if not(strategy.position_size[1] or strategy.position_size)
+        this.tp1 := this.entry_price + tp1Ratio * this.risk
+        this.tp2 := this.entry_price + tp2Ratio * this.risk
+        this.tp3 := this.entry_price + tp3Ratio * this.risk
+        if this.position_is_long
+            strategy.exit('L.Ex1', 'L.En', stop = this.sl, limit = this.tp1, qty_percent = tp1Share, comment_loss = 'SL', comment_profit = 'TP1')
+            strategy.exit('L.Ex2', 'L.En', stop = this.sl, limit = this.tp2, qty_percent = tp2Share, comment_loss = 'SL', comment_profit = 'TP2')
+            strategy.exit('L.Ex3', 'L.En', stop = this.sl, limit = this.tp3, qty_percent = tp3Share, comment_loss = 'SL', comment_profit = 'TP3')
+        if this.position_is_short
+            strategy.exit('S.Ex1', 'S.En', stop = this.sl, limit = this.tp1, qty_percent = tp1Share, comment_loss = 'SL', comment_profit = 'TP1')
+            strategy.exit('S.Ex2', 'S.En', stop = this.sl, limit = this.tp2, qty_percent = tp2Share, comment_loss = 'SL', comment_profit = 'TP2')
+            strategy.exit('S.Ex3', 'S.En', stop = this.sl, limit = this.tp3, qty_percent = tp3Share, comment_loss = 'SL', comment_profit = 'TP3')
+
+
+method set_tsl(setupx this) =>
+    if bar_index > this.entry_bar_index
+        if this.position_is_long
+            this.hh := math.max(high, this.hh)
+            this.RR := math.floor((this.hh - this.entry_price) / this.risk)
+            this.sl := math.max(this.sl, this.entry_price + (this.RR - 1) * this.risk)
+            strategy.exit('L.Ex', 'L.En', stop = this.sl, comment_loss = 'SL', comment_profit = 'TP')
+        if this.position_is_short
+            this.ll := math.min(low, this.ll)
+            this.RR := math.floor((this.ll - this.entry_price) / this.risk)
+            this.sl := math.min(this.sl, this.entry_price + (this.RR - 1) * this.risk)
+            strategy.exit('S.Ex', 'S.En', stop = this.sl, comment_loss = 'SL', comment_profit = 'TP')
+
+
+method checkOfst(setupx this, string direction) =>
+    bool isOK = true
+    if math.abs(close - this.sl) / close * 100 > maxFslOfst
+        if openPosWithMaxSL
+            if direction == 'long'
+                this.sl := close * (100 - maxFslOfst) / 100
+            else if direction == 'short'
+                this.sl := close * (100 + maxFslOfst) / 100
+        else
+            isOK := false
+            this.sl := na
+    if isOK
+        this.position_is_long  := direction == 'long'
+        this.position_is_short := direction == 'short'
+    isOK
+
+
+divdet(bool useHL, int pivLeftBars, int pivRightBars, int pivLBLen, int pivToCheck, float isrc) =>
+    //useHL      => use High|Low as pivot source
+    //pivLen     => pivot's right & left bars
+    //pivLBLen   => allowed range for pivot check
+    //pivToCheck => number of pivots to check in the allowed range
+    int result = 0
+    int x1 = na, int x2 = na
+    float y1 = na, float y2 = na
+    indMA = ta.sma(isrc, pivLeftBars)//indicator's MA
     
-    return 1
-}
+    plsrc = useHL ? low : close
+    isPL = ta.pivotlow(plsrc, pivLeftBars, pivRightBars)
+    var pl_pos = array.new_int(), var pl_val = array.new_float()
+    if isPL
+        array.unshift(pl_pos, bar_index[pivRightBars])
+        array.unshift(pl_val, plsrc[pivRightBars])
+    availPL = array.size(pl_val)
+    if availPL >= 2
+        if (availPL > pivToCheck) or (bar_index - array.get(pl_pos, availPL - 1) > pivLBLen)
+            array.pop(pl_pos), array.pop(pl_val)
+            availPL := array.size(pl_val)
+    if isPL and availPL >= 2
+        for counter = availPL - 1 to 1
+            firstPivVal = array.get(pl_val, counter), secondPivVal = array.get(pl_val, 0)
+            firstPivInx = array.get(pl_pos, counter), secondPivInx = array.get(pl_pos, 0)
+            firstIncVal = isrc[bar_index - firstPivInx], secondIncVal = isrc[pivRightBars]
 
-# Create or overwrite the Markdown file
-echo "# Project Code Overview" > "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
-echo "Generated on: $(date)" >> "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
-echo "## Table of Contents" >> "$OUTPUT_FILE"
-echo "" >> "$OUTPUT_FILE"
+            if firstPivVal > secondPivVal
+                if firstIncVal < secondIncVal
+                    pivDis = secondPivInx - firstPivInx
+                    pivDif = secondPivVal - firstPivVal
+                    pivSlope = pivDif / pivDis
+                    incDif = secondIncVal - firstIncVal
+                    incSlope = incDif / pivDis
+                    for counter = 1 to pivDis
+                        if plsrc[counter + pivRightBars] < secondPivVal - pivSlope * counter
+                            break
+                        if isrc[counter + pivRightBars] * 1 < secondIncVal - incSlope * counter
+                            break
+                        if counter == pivDis                            
+                            if isrc[bar_index - firstPivInx] < indMA[bar_index - firstPivInx - pivRightBars]
+                                if isrc[pivRightBars] < indMA
+                                    result := 1
+                                    x1 := time[pivDis + pivRightBars], x2 := time[pivRightBars]
+                                    y1 := plsrc[pivDis + pivRightBars], y2 := plsrc[pivRightBars]
+                                    break
+            if result
+                break
+    phsrc = useHL ? high : close
+    isPH = ta.pivothigh(phsrc, pivLeftBars, pivRightBars)
+    var ph_pos = array.new_int(), var ph_val = array.new_float()
+    if isPH
+        array.unshift(ph_pos, bar_index[pivRightBars])
+        array.unshift(ph_val, phsrc[pivRightBars])
+    availPH = array.size(ph_val)
+    if availPH >= 2
+        if (availPH > pivToCheck) or (bar_index - array.get(ph_pos, availPH - 1) > pivLBLen)
+            array.pop(ph_pos), array.pop(ph_val)
+            availPH := array.size(ph_val)
+    if isPH and availPH >= 2
+        for counter = availPH - 1 to 1
+            firstPivVal = array.get(ph_val, counter), secondPivVal = array.get(ph_val, 0)
+            firstPivInx = array.get(ph_pos, counter), secondPivInx = array.get(ph_pos, 0)
+            firstIncVal = isrc[bar_index - firstPivInx], secondIncVal = isrc[pivRightBars]
 
-# Generate table of contents
-find . -type f -not -path '*/\.*' | sort | while read -r file; do
-    if ! should_exclude "$file"; then
-        echo "- [$file](#file-${file//[^a-zA-Z0-9]/-})" >> "$OUTPUT_FILE"
-    fi
-done
+            if firstPivVal < secondPivVal
+                if firstIncVal > secondIncVal
+                    pivDis = secondPivInx - firstPivInx
+                    pivDif = secondPivVal - firstPivVal
+                    pivSlope = pivDif / pivDis
+                    incDif = secondIncVal - firstIncVal
+                    incSlope = incDif / pivDis
+                    for counter = 1 to pivDis
+                        if phsrc[counter + pivRightBars] > secondPivVal - pivSlope * counter
+                            break
+                        if isrc[counter + pivRightBars] * 1 > secondIncVal - incSlope * counter
+                            break
+                        if counter == pivDis                            
+                            if isrc[bar_index - firstPivInx] > indMA[bar_index - firstPivInx - pivRightBars]
+                                if isrc[pivRightBars] > indMA
+                                    result := -1
+                                    x1 := time[pivDis + pivRightBars], x2 := time[pivRightBars]
+                                    y1 := phsrc[pivDis + pivRightBars], y2 := phsrc[pivRightBars]
+                                    break
+            if result
+                break
+    [result, x1, y1, x2, y2]
+//#endregion
 
-echo "" >> "$OUTPUT_FILE"
 
-# Loop through all files in the current directory and subdirectories
-find . -type f -not -path '*/\.*' | sort | while read -r file; do
-    if ! should_exclude "$file"; then
-        echo "## File: $file {#file-${file//[^a-zA-Z0-9]/-}}" >> "$OUTPUT_FILE"
-        echo "" >> "$OUTPUT_FILE"
-        
-        # Determine the language for syntax highlighting
-        extension="${file##*.}"
-        if [[ "$extension" == "$file" ]]; then
-            extension="${file#.}"
-        fi
-        language=$(get_language "$extension")
-        
-        echo '\`\`\`'"$language" >> "$OUTPUT_FILE"
-        cat "$file" | escape_markdown >> "$OUTPUT_FILE"
-        echo '\`\`\`' >> "$OUTPUT_FILE"
-        echo "" >> "$OUTPUT_FILE"
-    fi
-done
 
-echo "Project overview Markdown file has been created: $OUTPUT_FILE"
-EOF
+//#region computation
+var float hh = 0, var float ll = 10e6
 
-chmod +x create_project_md.sh
+int _divx1 = na, int _divx2 = na
 
-./create_project_md.sh
+var float sl = na
 
-tree -L 2
- ////////////////```
+var int divSide = na, var line divLine = na, var label divLabel = na
+
+var line neckLine = na
+
+
+
+[macd, macdSig, macdHist] = ta.macd(macdSrc, macdFastLen, macdSlowLen, macdSigLen)
+
+[div_result, divx1, divy1, divx2, divy2] = request.security(syminfo.tickerid, div_res, divdet(div_pivot_src == 'High/Low', div_pivot_leftbars, div_pivot_rightbars, div_pivot_lookBackLen, div_pivot_howManyToCheck, macdHist))
+
+
+
+if div_result
+    divSide := div_result
+    sty  = div_result == 1 ? label.style_label_up : label.style_label_down
+    divLine := line.new(divx1, divy1, divx2, divy2, xloc = xloc.bar_time, color = #00000000, width = 2)
+    divLabel := label.new(divx2, divy2, xloc = xloc.bar_time, text = 'MACD', color = #00000000, textcolor = #00000000, size = size.small, style = sty)
+    hh := 0, ll := 10e6
+    sl := divy2
+    for i = 0 to 300
+        if time[i] == divx2
+            _divx2 := inx - i
+        if time[i] == divx1
+            _divx1 := inx - i
+            break
+
+    info = str.format_time(divx1, "MM-dd'T'HH:mm", syminfo.timezone) + '-' + str.format_time(divx2, "MM-dd'T'HH:mm", syminfo.timezone)
+
+    len = _divx2 - _divx1
+    if divSide == +1
+        for j = inx - _divx2 to inx - _divx1
+            hh := math.max(hh, high[j])
+        neckLine := line.new(_divx1, hh, _divx2, hh, color = #00000000)
+        // if alertOnDiv
+        //     alert('New Positive Divergence ' + info, alert.freq_once_per_bar_close)
+    if divSide == -1
+        for j = inx - _divx2 to inx - _divx1
+            ll := math.min(ll, low[j])
+        neckLine := line.new(_divx1, ll, _divx2, ll, color = #00000000)
+        // if alertOnDiv
+        //     alert('New Negative Divergence ' + info, alert.freq_once_per_bar_close)
+
+
+if divSide == +1
+    if low < sl
+        divSide := na
+        sl := na
+        hh := 0, ll := 10e6
+if divSide == -1
+    if high > sl
+        divSide := na
+        sl := na
+        hh := 0, ll := 10e6
+//#endregion
+
+
+
+//#region strategy
+//                 Strategy                 //
+if not strategy.position_size
+    setup.entry_price       := na
+    setup.entry_time        := na
+    setup.sl                := na
+    setup.position_is_long  := na
+    setup.position_is_short := na
+    setup.risk              := na
+    setup.tp1               := na
+    setup.tp2               := na
+    setup.tp3               := na
+    setup.hh                := 0
+    setup.ll                := 999999
+    setup.RR                := na
+
+    if strategy.position_size[1]
+        setup.exit_bar_index := bar_index[1]
+        hh       := 0
+        ll       := 10e6
+        neckLine := na
+        divSide  := na
+        divLine  := na
+        divLabel := na
+
+bool longCnd = na, bool shortCnd = na
+
+//-->long
+if not(strategy.position_size[1] or strategy.position_size or setup.position_is_long)
+    if divSide == +1
+        if close > hh
+            setup.sl := sl// append the initial SL at the entry time---> setup.sl := close - atrSLOfst
+            if setup.checkOfst('long')//checking max sl offset
+                setup.entry('Long')
+                neckLine.set_x2(inx), neckLine.set_color(div_posColr)
+                label.new(inx, neckLine.get_y1(), text = 'Breakup', color = div_posColr, style = label.style_label_left, textcolor = color.black, size = size.small)
+                divLine.set_color(div_posColr)
+                divLabel.set_color(div_posColr), divLabel.set_textcolor(color.black)
+                //if alertOnBreak
+                    //alert('Breakup' + '@' + str.tostring(neckLine.get_y1()))
+
+//short
+if not(strategy.position_size[1] or strategy.position_size or setup.position_is_short)
+    if divSide == -1
+        if close < ll
+            setup.sl := sl// append the initial SL at the entry time---> setup.sl := close + atrSLOfst
+            if setup.checkOfst('short')//checking max sl offset
+                setup.entry('Short')
+                neckLine.set_x2(inx), neckLine.set_color(div_negColr)
+                label.new(inx, neckLine.get_y1(), text = 'Breakdown', color = div_negColr, style = label.style_label_left, textcolor = color.black, size = size.small)
+                divLine.set_color(div_negColr)
+                divLabel.set_color(div_negColr), divLabel.set_textcolor(color.black)
+                //if alertOnBreak
+                    //alert('Breakdown' + '@' + str.tostring(neckLine.get_y1()))
+
+
+//-->SL & TP
+bool shwtp2 = true, bool shwtp3 = true
+//-->
+if tp1Share == 100
+    shwtp2 := false
+else if tp1Share + tp2Share >= 100
+    shwtp3 := false
+    tp2Share := 100
+else
+    tp3Share := 100
+//<--
+
+if sltpmode == 'Fixed'
+    if moveFwdFSL
+        setup.move_fwd_fsl()
+    else
+        setup.set_tp()
+
+if sltpmode == 'Trailing'
+    setup.set_tsl()
+
+//<--SL & TP
+
+//#endregion
+
+plot(setup.sl,  title = 'SL',  style = plot.style_linebr, color = color.red)
+plot(setup.tp1, title = 'TP1', style = plot.style_linebr, color = color.aqua)
+plot(shwtp2 ? setup.tp2 : na, title = 'TP2', style = plot.style_linebr, color = color.blue)
+plot(shwtp3 ? setup.tp3 : na, title = 'TP3', style = plot.style_linebr, color = color.purple)
+```
 
 ## File: ./requirements.txt {#file---requirements-txt}
 
@@ -221,14 +574,19 @@ openai==0.27.0```
 ## File: ./src/ai/ai_client.py {#file---src-ai-ai-client-py}
 
 ```python
-import openai
+import os
+from openai import OpenAI
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 class AIClient:
-    def __init__(self, api_key):
-        openai.api_key = api_key
+    def __init__(self):
+        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.system_prompt = (
             "You are an AI assistant specializing in forex trading analysis and strategy.\n"
             "Provide concise, informative responses to trading-related queries.\n"
@@ -236,7 +594,8 @@ class AIClient:
             "but avoid giving specific financial advice. Always remind users to do their own research\n"
             "and consult with licensed financial advisors for personalized advice.\n"
             "When provided with chart context, use this information to give more accurate and relevant responses.\n"
-            "Consider the current symbol, timeframe, price, and active indicators when formulating your answers."
+            "Consider the current symbol, timeframe, price, and active indicators when formulating your answers.\n"
+            "You can perform complex analysis and calculations based on the provided data."
         )
 
     def generate_response(self, prompt, chart_context=None):
@@ -245,30 +604,41 @@ class AIClient:
                 {"role": "system", "content": self.system_prompt}
             ]
             if chart_context:
-                context_message = (
-                    f"Chart Context:\n"
-                    f"Symbol: {chart_context.get('symbol', 'N/A')}\n"
-                    f"Timeframe: {chart_context.get('timeframe', 'N/A')}\n"
-                    f"Price: {chart_context.get('price', 'N/A')}\n"
-                    f"Indicators: {', '.join(chart_context.get('indicators', [])) if chart_context.get('indicators') else 'None'}"
-                )
+                context_message = self.format_chart_context(chart_context)
                 messages.append({"role": "user", "content": context_message})
             messages.append({"role": "user", "content": prompt})
 
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini-2024-07-18",  # or "o1-mini-2024-09-12" for o1-mini
                 messages=messages,
-                max_tokens=150,
+                max_tokens=500,
                 n=1,
                 stop=None,
                 temperature=0.7,
             )
-            message = response.choices[0].message['content'].strip()
+            message = response.choices[0].message.content.strip()
             logger.info(f"AI response generated successfully")
             return message
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}")
-            raise Exception(f"Error generating AI response: {str(e)}")```
+            raise Exception(f"Error generating AI response: {str(e)}")
+
+    def format_chart_context(self, chart_context):
+        context_message = "Chart Context:\n"
+        context_message += f"Symbol: {chart_context.get('symbol', 'N/A')}\n"
+        context_message += f"Timeframe: {chart_context.get('timeframe', 'N/A')}\n"
+        context_message += f"Current Price: {chart_context.get('price', 'N/A')}\n"
+        
+        indicators = chart_context.get('indicators', [])
+        if indicators:
+            context_message += "Active Indicators:\n"
+            for indicator in indicators:
+                context_message += f"- {indicator['type']}: {indicator['params']}\n"
+        else:
+            context_message += "No active indicators\n"
+        
+        return context_message
+```
 
 ## File: ./src/ai_client.py {#file---src-ai-client-py}
 
@@ -446,16 +816,12 @@ class OandaDataFetcher:
 ## File: ./src/routes/api_routes.py {#file---src-routes-api-routes-py}
 
 ```python
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from src.data.data_fetcher import OandaDataFetcher
 from src.ai.ai_client import AIClient
-import os
 import json
 
 api_bp = Blueprint('api', __name__)
-
-data_fetcher = OandaDataFetcher(api_key=os.getenv('OANDA_API_KEY'))
-ai_client = AIClient(api_key=os.getenv('OPENAI_API_KEY'))
 
 @api_bp.route('/candlestick_data')
 def candlestick_data():
@@ -463,7 +829,7 @@ def candlestick_data():
     timeframe = request.args.get('timeframe', 'H1')
     count = int(request.args.get('count', 1000))
     try:
-        data = data_fetcher.fetch_candlestick_data(instrument=symbol, granularity=timeframe, count=count)
+        data = current_app.data_fetcher.fetch_candlestick_data(instrument=symbol, granularity=timeframe, count=count)
         return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -472,7 +838,7 @@ def candlestick_data():
 def price_data():
     symbol = request.args.get('symbol', 'EUR_USD')
     try:
-        data = data_fetcher.fetch_price_data(symbol)
+        data = current_app.data_fetcher.fetch_price_data(symbol)
         return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -482,7 +848,7 @@ def search_instruments():
     query = request.args.get('query', '').upper()
     category = request.args.get('category', 'all')
     try:
-        instruments = data_fetcher.search_instruments(query=query, category=category)
+        instruments = current_app.data_fetcher.search_instruments(query=query, category=category)
         return jsonify(instruments)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -495,7 +861,7 @@ def ai_chat():
     if not user_input:
         return jsonify({'error': 'No message provided'}), 400
     try:
-        ai_response = ai_client.generate_response(prompt=user_input, chart_context=chart_context)
+        ai_response = current_app.ai_client.generate_response(prompt=user_input, chart_context=chart_context)
         return jsonify({'response': ai_response})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -527,7 +893,8 @@ def favorite_indicator():
     with open('indicators.json', 'w') as f:
         json.dump(indicators, f)
     
-    return jsonify({'success': True})```
+    return jsonify({'success': True})
+```
 
 ## File: ./src/routes/main_routes.py {#file---src-routes-main-routes-py}
 
@@ -557,6 +924,7 @@ def index():
     align-items: center;
     cursor: pointer;
     transition: transform 0.2s;
+    z-index: 1000;
 }
 
 #ai-chat-icon:hover {
@@ -576,6 +944,7 @@ def index():
     border: 1px solid var(--border-color);
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 999;
 }
 
 #ai-chat-panel.open {
@@ -584,6 +953,7 @@ def index():
 
 #ai-chat-panel.maximized {
     height: calc(100% - 100px);
+    width: 400px;
 }
 
 #ai-chat-header {
@@ -618,6 +988,41 @@ def index():
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: 5px;
+}
+
+.chat-message {
+    margin-bottom: 10px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    max-width: 80%;
+}
+
+.user-message {
+    align-self: flex-end;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+}
+
+.ai-message {
+    align-self: flex-start;
+    background-color: var(--panel-bg);
+    color: var(--text-color);
+}
+
+@media (max-width: 768px) {
+    #ai-chat-panel {
+        width: 100%;
+        right: -100%;
+    }
+
+    #ai-chat-panel.open {
+        right: 0;
+    }
+
+    #ai-chat-panel.maximized {
+        width: 100%;
+        height: calc(100% - 80px);
+    }
 }
 ```
 
@@ -1322,50 +1727,82 @@ body {
 import { initTheme } from './modules/theme.js';
 import { initSidebar } from './modules/sidebar.js';
 import { initWatchlist } from './modules/watchlist.js';
-import { initChat } from './modules/chat.js';
+import { initAIAssistant } from './modules/aiAssistant.js';
 import { initStrategies } from './modules/strategies.js';
 import { initIndicators } from './modules/indicators.js';
 import { initChartControls } from './modules/chartControls.js';
+import * as chartFunctions from './chart.js';
+
+// Initialize global variables
+window.currentSymbol = 'EUR_USD';
+window.currentTimeframe = 'H1';
+window.chartFunctions = chartFunctions;
 
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initSidebar();
     initWatchlist();
-    initChat();
+    initAIAssistant();
     initStrategies();
     initIndicators();
     initChartControls();
 
     // Initialize the chart
-    if (window.chartFunctions && typeof window.chartFunctions.createChart === 'function') {
-        window.chartFunctions.createChart();
+    if (chartFunctions && typeof chartFunctions.createChart === 'function') {
+        chartFunctions.createChart();
     } else {
         console.error('Chart functions not found. Make sure chart.js is loaded correctly.');
     }
 
     // Add event listener for window resize
     window.addEventListener('resize', () => {
-        if (window.chartFunctions && typeof window.chartFunctions.adjustChartSize === 'function') {
-            window.chartFunctions.adjustChartSize();
+        if (chartFunctions && typeof chartFunctions.adjustChartSize === 'function') {
+            chartFunctions.adjustChartSize();
         }
     });
-});
 
-// You can add any global functions or variables here if needed
+    // Add event listener for MyriadLabs strategy settings
+    document.getElementById('apply-myriadlabs-settings').addEventListener('click', () => {
+        const macdFastPeriod = parseInt(document.getElementById('macd-fast-period').value);
+        const macdSlowPeriod = parseInt(document.getElementById('macd-slow-period').value);
+        const macdSignalPeriod = parseInt(document.getElementById('macd-signal-period').value);
+        const stopLoss = parseInt(document.getElementById('stop-loss').value);
+        const takeProfit1 = parseInt(document.getElementById('take-profit-1').value);
+        const takeProfit2 = parseInt(document.getElementById('take-profit-2').value);
+        const takeProfit3 = parseInt(document.getElementById('take-profit-3').value);
+        const trailingStopLoss = document.getElementById('trailing-stop-loss').checked;
+
+        const params = {
+            macdParams: { fastPeriod: macdFastPeriod, slowPeriod: macdSlowPeriod, signalPeriod: macdSignalPeriod },
+            sl: stopLoss,
+            tp1: takeProfit1,
+            tp2: takeProfit2,
+            tp3: takeProfit3,
+            trailingSL: trailingStopLoss
+        };
+
+        chartFunctions.applyStrategyToChart('Myriad Labs Strategy', params);
+    });
+});
 ```
 
 ## File: ./static/js/chart.js {#file---static-js-chart-js}
 
 ```javascript
+import { addIndicator, removeIndicator, getActiveIndicators as getActiveIndicatorsFromModule, clearActiveIndicators } from './modules/activeIndicators.js';
+import { myriadLabsStrategy } from './strategies/myriadLabsStrategy.js';
+
 let chart;
 let candleSeries;
 let currentSymbol = 'EUR_USD';
 let currentTimeframe = 'H1';
 let activeDrawingTool = null;
 let drawings = [];
-let indicators = [];
+let currentDrawing = null;
+let drawingStartPoint = null;
+let activeStrategy = null;
 
-function createChart() {
+export function createChart() {
     const chartContainer = document.getElementById('candlestick-chart');
     chart = LightweightCharts.createChart(chartContainer, {
         width: chartContainer.offsetWidth,
@@ -1376,7 +1813,7 @@ function createChart() {
         },
         grid: {
             vertLines: { color: 'rgba(197, 203, 206, 0.5)' },
-            horzLines: { color: 'rgba(197, 203, 206, 0.5)' },
+            horzLines: { color: 'rgba(197, 203, 206, 5)' },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
@@ -1419,7 +1856,7 @@ function createChart() {
     fetchLatestData();
 }
 
-function fetchLatestData() {
+export function fetchLatestData() {
     fetch(`/api/candlestick_data?symbol=${currentSymbol}&timeframe=${currentTimeframe}&count=1000`)
         .then(response => response.json())
         .then(data => {
@@ -1433,6 +1870,9 @@ function fetchLatestData() {
                 }));
                 candleSeries.setData(formattedData);
                 updateSymbolInfo(currentSymbol, formattedData[formattedData.length - 1]);
+                if (activeStrategy) {
+                    applyStrategyToChart(activeStrategy);
+                }
             }
         })
         .catch(error => console.error('Error fetching candlestick data:', error));
@@ -1443,12 +1883,12 @@ function updateSymbolInfo(symbol, lastCandle) {
     symbolInfo.innerHTML = `${symbol} O: ${lastCandle.open.toFixed(5)} H: ${lastCandle.high.toFixed(5)} L: ${lastCandle.low.toFixed(5)} C: ${lastCandle.close.toFixed(5)}`;
 }
 
-function switchTimeframe(timeframe) {
+export function switchTimeframe(timeframe) {
     currentTimeframe = timeframe;
     fetchLatestData();
 }
 
-function switchSymbol(symbol) {
+export function switchSymbol(symbol) {
     currentSymbol = symbol;
     fetchLatestData();
 }
@@ -1519,13 +1959,13 @@ function showChartContextMenu(x, y) {
     contextMenu.style.top = `${y}px`;
 
     contextMenu.innerHTML = `
-        <div class="context-menu-item" onclick="toggleLogScale()">Toggle Log Scale</div>
-        <div class="context-menu-item" onclick="showChartSettings()">Chart Settings</div>
-        <div class="context-menu-item" onclick="clearAllDrawings()">Clear All Drawings</div>
+        <div class="context-menu-item" onclick="window.chartFunctions.toggleLogScale()">Toggle Log Scale</div>
+        <div class="context-menu-item" onclick="window.chartFunctions.showChartSettings()">Chart Settings</div>
+        <div class="context-menu-item" onclick="window.chartFunctions.clearAllDrawings()">Clear All Drawings</div>
     `;
 }
 
-function toggleLogScale() {
+export function toggleLogScale() {
     const currentScale = chart.priceScale('right').mode();
     chart.priceScale('right').applyOptions({
         mode: currentScale === 0 ? 1 : 0, // 0 for normal, 1 for logarithmic
@@ -1533,13 +1973,13 @@ function toggleLogScale() {
     hideChartContextMenu();
 }
 
-function showChartSettings() {
+export function showChartSettings() {
     // Implement chart settings dialog
     console.log("Chart settings clicked");
     hideChartContextMenu();
 }
 
-function clearAllDrawings() {
+export function clearAllDrawings() {
     drawings.forEach(drawing => chart.removeSeries(drawing));
     drawings = [];
     hideChartContextMenu();
@@ -1550,19 +1990,19 @@ function hideChartContextMenu() {
     contextMenu.style.display = 'none';
 }
 
-function setActiveDrawingTool(tool) {
+export function setActiveDrawingTool(tool) {
     activeDrawingTool = tool;
 }
 
-function getLastPrice() {
-    const visibleData = candleSeries.visibleData();
-    if (visibleData.length > 0) {
-        return visibleData[visibleData.length - 1].close;
+export function getLastPrice() {
+    const seriesData = candleSeries.data();
+    if (seriesData.length > 0) {
+        return seriesData[seriesData.length - 1].close;
     }
     return null;
 }
 
-function addIndicator(type, params = {}) {
+export function addChartIndicator(type, params = {}) {
     let indicator;
     switch (type) {
         case 'sma':
@@ -1581,18 +2021,23 @@ function addIndicator(type, params = {}) {
             break;
         // Add more indicator types as needed
     }
-    indicators.push({ type, series: indicator, params });
-    // Calculate and set data for the indicator
-}
-
-function removeIndicator(index) {
-    if (index >= 0 && index < indicators.length) {
-        chart.removeSeries(indicators[index].series);
-        indicators.splice(index, 1);
+    if (indicator) {
+        addIndicator({ type, series: indicator, params });
+        // Calculate and set data for the indicator
+    } else {
+        console.error(`Failed to add indicator: ${type}`);
     }
 }
 
-function adjustChartSize() {
+export function removeChartIndicator(index) {
+    const indicators = getActiveIndicatorsFromModule();
+    if (index >= 0 && index < indicators.length) {
+        chart.removeSeries(indicators[index].series);
+        removeIndicator(indicators[index].id);
+    }
+}
+
+export function adjustChartSize() {
     const chartContainer = document.getElementById('candlestick-chart');
     chart.applyOptions({
         width: chartContainer.offsetWidth,
@@ -1600,18 +2045,262 @@ function adjustChartSize() {
     });
 }
 
-// Expose functions to be used in app.js
+export function getActiveIndicators() {
+    return getActiveIndicatorsFromModule();
+}
+
+export function applyStrategyToChart(strategy) {
+    activeStrategy = strategy;
+    clearActiveIndicators();
+    const candles = candleSeries.data();
+    const params = {
+        macdParams: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+        sl: 10,
+        tp1: 20,
+        tp2: 30,
+        tp3: 40,
+        trailingSL: true
+    };
+    const strategyData = myriadLabsStrategy(candles, params);
+    plotStrategyData(strategyData);
+}
+
+function plotStrategyData(strategyData) {
+    const { macdData, divergences, trades, performanceMetrics } = strategyData;
+    plotMACDDivergence(macdData, divergences);
+    plotEntryExitPoints(trades);
+    plotSLTPLevels(trades);
+    plotPerformanceTable(performanceMetrics);
+}
+
+function plotPerformanceTable(performanceMetrics) {
+    const performanceTable = document.getElementById('performance-table');
+    if (performanceTable) {
+        performanceTable.innerHTML = `
+            <tr><td>Net Profit</td><td>${performanceMetrics.netProfit}</td></tr>
+            <tr><td>Total Trades Closed</td><td>${performanceMetrics.totalTradesClosed}</td></tr>
+            <tr><td>Percent Profitable</td><td>${performanceMetrics.percentProfitable}%</td></tr>
+            <tr><td>Profit Factor</td><td>${performanceMetrics.profitFactor}</td></tr>
+            <tr><td>Max Drawdown</td><td>${performanceMetrics.maxDrawdown}</td></tr>
+            <tr><td>Average Trade</td><td>${performanceMetrics.averageTrade}</td></tr>
+        `;
+    }
+}
+
+function plotMACDDivergence(macdData, divergences) {
+    // Implement MACD divergence plotting logic
+}
+
+function plotEntryExitPoints(trades) {
+    // Implement entry and exit points plotting logic
+}
+
+function plotSLTPLevels(trades) {
+    // Implement SL and TP levels plotting logic
+}
+
+// Make all exported functions available globally
 window.chartFunctions = {
     createChart,
+    fetchLatestData,
     switchTimeframe,
     switchSymbol,
+    toggleLogScale,
+    showChartSettings,
+    clearAllDrawings,
     setActiveDrawingTool,
     getLastPrice,
-    addIndicator,
-    removeIndicator,
+    addChartIndicator,
+    removeChartIndicator,
     adjustChartSize,
-    fetchLatestData
+    getActiveIndicators,
+    applyStrategyToChart
 };
+```
+
+## File: ./static/js/modules/activeIndicators.js {#file---static-js-modules-activeIndicators-js}
+
+```javascript
+let activeIndicators = [];
+
+export function addIndicator(indicator) {
+    activeIndicators.push(indicator);
+}
+
+export function removeIndicator(indicatorId) {
+    activeIndicators = activeIndicators.filter(ind => ind.id !== indicatorId);
+}
+
+export function getActiveIndicators() {
+    return activeIndicators;
+}
+
+export function clearActiveIndicators() {
+    activeIndicators = [];
+}
+```
+
+## File: ./static/js/modules/aiAssistant.js {#file---static-js-modules-aiAssistant-js}
+
+```javascript
+class AIAssistant {
+    constructor() {
+        this.chatPanel = document.getElementById('ai-chat-panel');
+        this.chatMessages = document.getElementById('chat-messages');
+        this.userInput = document.getElementById('user-input');
+        this.sendButton = document.getElementById('send-message');
+        this.aiChatIcon = document.getElementById('ai-chat-icon');
+        this.closeChat = document.getElementById('close-chat');
+        this.maximizeChat = document.getElementById('maximize-chat');
+
+        this.initEventListeners();
+    }
+
+    initEventListeners() {
+        if (this.aiChatIcon) this.aiChatIcon.addEventListener('click', () => this.toggleChatPanel());
+        if (this.closeChat) this.closeChat.addEventListener('click', () => this.toggleChatPanel());
+        if (this.maximizeChat) this.maximizeChat.addEventListener('click', () => this.maximizeChatPanel());
+        if (this.sendButton) this.sendButton.addEventListener('click', () => this.sendChatMessage());
+        if (this.userInput) {
+            this.userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.sendChatMessage();
+                }
+            });
+        }
+    }
+
+    toggleChatPanel() {
+        if (this.chatPanel) {
+            this.chatPanel.classList.toggle('open');
+        }
+    }
+
+    maximizeChatPanel() {
+        if (this.chatPanel) {
+            this.chatPanel.classList.toggle('maximized');
+        }
+    }
+
+    sendChatMessage() {
+        const message = this.userInput.value.trim();
+        if (message) {
+            this.appendChatMessage('User', message);
+            this.userInput.value = '';
+            
+            const chartContext = this.getChartContext();
+            
+            fetch('/api/ai_chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ message, chartContext })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.response) {
+                    this.appendChatMessage('AI', data.response);
+                } else if (data.error) {
+                    this.appendChatMessage('AI', 'Error: ' + data.error);
+                } else {
+                    this.appendChatMessage('AI', 'Error: Unable to get a response.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.appendChatMessage('AI', 'Error: Unable to get a response. Please try again later.');
+            });
+        }
+    }
+
+    appendChatMessage(sender, message) {
+        if (this.chatMessages) {
+            const messageElement = document.createElement('div');
+            messageElement.className = `chat-message ${sender.toLowerCase()}-message`;
+            messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            this.chatMessages.appendChild(messageElement);
+            this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        }
+    }
+
+    getChartContext() {
+        return {
+            symbol: window.currentSymbol,
+            timeframe: window.currentTimeframe,
+            price: window.chartFunctions ? window.chartFunctions.getLastPrice() : null,
+            indicators: window.chartFunctions ? window.chartFunctions.getActiveIndicators() : []
+        };
+    }
+}
+
+export function initAIAssistant() {
+    const aiAssistant = new AIAssistant();
+    window.aiAssistant = aiAssistant;  // Make it globally accessible if needed
+}
+```
+
+## File: ./static/js/modules/backtesting.js {#file---static-js-modules-backtesting-js}
+
+```javascript
+class Backtesting {
+    constructor(candles, strategy) {
+        this.candles = candles;
+        this.strategy = strategy;
+        this.trades = [];
+        this.performanceMetrics = {};
+    }
+
+    run() {
+        const strategyData = this.strategy(this.candles);
+        this.trades = strategyData.trades;
+        this.performanceMetrics = this.calculatePerformanceMetrics();
+    }
+
+    calculatePerformanceMetrics() {
+        let netProfit = 0;
+        let totalTradesClosed = 0;
+        let profitableTrades = 0;
+        let totalProfit = 0;
+        let totalLoss = 0;
+        let maxDrawdown = 0;
+        let peak = 0;
+
+        this.trades.forEach(trade => {
+            if (trade.status === 'closed') {
+                totalTradesClosed++;
+                const profit = trade.exit - trade.entry;
+                netProfit += profit;
+                if (profit > 0) {
+                    profitableTrades++;
+                    totalProfit += profit;
+                } else {
+                    totalLoss += Math.abs(profit);
+                }
+                peak = Math.max(peak, netProfit);
+                maxDrawdown = Math.max(maxDrawdown, peak - netProfit);
+            }
+        });
+
+        const percentProfitable = (profitableTrades / totalTradesClosed) * 100;
+        const profitFactor = totalProfit / totalLoss;
+        const averageTrade = netProfit / totalTradesClosed;
+
+        return {
+            netProfit,
+            totalTradesClosed,
+            percentProfitable,
+            profitFactor,
+            maxDrawdown,
+            averageTrade
+        };
+    }
+}
+
+export default Backtesting;
 ```
 
 ## File: ./static/js/modules/chartControls.js {#file---static-js-modules-chartControls-js}
@@ -1625,10 +2314,12 @@ export function initChartControls() {
 function initializeTimeframeButtons() {
     document.querySelectorAll('.timeframe-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            document.querySelector('.timeframe-btn[selected]').removeAttribute('selected');
+            document.querySelector('.timeframe-btn[selected]')?.removeAttribute('selected');
             e.target.setAttribute('selected', '');
             window.currentTimeframe = e.target.dataset.timeframe;
-            window.chartFunctions.switchTimeframe(e.target.dataset.timeframe);
+            if (window.chartFunctions && window.chartFunctions.switchTimeframe) {
+                window.chartFunctions.switchTimeframe(e.target.dataset.timeframe);
+            }
         });
     });
 }
@@ -1637,7 +2328,9 @@ function initializeChartButtons() {
     document.querySelectorAll('.tool-button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const tool = e.target.closest('.tool-button').dataset.tool;
-            window.chartFunctions.setActiveDrawingTool(tool);
+            if (window.chartFunctions && window.chartFunctions.setActiveDrawingTool) {
+                window.chartFunctions.setActiveDrawingTool(tool);
+            }
         });
     });
 }
@@ -1645,78 +2338,325 @@ function initializeChartButtons() {
 // You might want to add more functions here to handle other chart controls
 ```
 
-## File: ./static/js/modules/chat.js {#file---static-js-modules-chat-js}
+## File: ./static/js/modules/configurations.js {#file---static-js-modules-configurations-js}
 
 ```javascript
-export function initChat() {
-    document.getElementById('ai-chat-icon').addEventListener('click', toggleChatPanel);
-    document.getElementById('close-chat').addEventListener('click', toggleChatPanel);
-    document.getElementById('maximize-chat').addEventListener('click', maximizeChatPanel);
-    document.getElementById('send-message').addEventListener('click', sendChatMessage);
-    document.getElementById('user-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendChatMessage();
-        }
-    });
-}
+class Configurations {
+    constructor() {
+        this.configurations = this.loadConfigurations();
+    }
 
-function toggleChatPanel() {
-    const chatPanel = document.getElementById('ai-chat-panel');
-    chatPanel.classList.toggle('open');
-}
+    saveConfiguration(name, config) {
+        this.configurations[name] = config;
+        this.saveConfigurations();
+    }
 
-function maximizeChatPanel() {
-    const chatPanel = document.getElementById('ai-chat-panel');
-    chatPanel.classList.toggle('maximized');
-}
+    loadConfiguration(name) {
+        return this.configurations[name] || null;
+    }
 
-function sendChatMessage() {
-    const input = document.getElementById('user-input');
-    const message = input.value.trim();
-    if (message) {
-        appendChatMessage('User', message);
-        input.value = '';
-        fetch('/api/ai_chat', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                message: message,
-                chartContext: {
-                    symbol: window.currentSymbol,
-                    timeframe: window.currentTimeframe,
-                    price: window.chartFunctions.getLastPrice(),
-                    indicators: getActiveIndicators()
-                }
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.response) {
-                appendChatMessage('AI', data.response);
-            } else {
-                appendChatMessage('AI', 'Error: Unable to get a response.');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            appendChatMessage('AI', 'Error: Unable to get a response.');
-        });
+    deleteConfiguration(name) {
+        delete this.configurations[name];
+        this.saveConfigurations();
+    }
+
+    saveConfigurations() {
+        localStorage.setItem('strategyConfigurations', JSON.stringify(this.configurations));
+    }
+
+    loadConfigurations() {
+        const savedConfigs = localStorage.getItem('strategyConfigurations');
+        return savedConfigs ? JSON.parse(savedConfigs) : {};
     }
 }
 
-function appendChatMessage(sender, message) {
-    const chatMessages = document.getElementById('chat-messages');
-    const messageElement = document.createElement('div');
-    messageElement.className = `chat-message ${sender.toLowerCase()}-message`;
-    messageElement.innerHTML = `<strong>${sender}:</strong> ${message}`;
-    chatMessages.appendChild(messageElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+export default new Configurations();
+```
+
+## File: ./static/js/modules/crossBrowser.js {#file---static-js-modules-crossBrowser-js}
+
+```javascript
+/**
+ * Cross-browser compatibility module
+ * Ensures the strategy works consistently across different browsers and devices
+ * Implements fallback options for browsers that don't support certain features
+ */
+
+/**
+ * Check if the browser supports a specific feature
+ * @param {string} feature - The feature to check
+ * @returns {boolean} - True if the feature is supported, false otherwise
+ */
+export function isFeatureSupported(feature) {
+    switch (feature) {
+        case 'WebWorkers':
+            return typeof Worker !== 'undefined';
+        case 'LocalStorage':
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        case 'ServiceWorkers':
+            return 'serviceWorker' in navigator;
+        default:
+            return false;
+    }
 }
 
-function getActiveIndicators() {
-    // Implement this function to return active indicators
-    return [];
+/**
+ * Apply fallback for unsupported features
+ * @param {string} feature - The feature to apply fallback for
+ */
+export function applyFallback(feature) {
+    switch (feature) {
+        case 'WebWorkers':
+            console.warn('Web Workers are not supported in this browser. Performance may be affected.');
+            // Implement fallback logic if necessary
+            break;
+        case 'LocalStorage':
+            console.warn('Local Storage is not supported in this browser. Data persistence may be affected.');
+            // Implement fallback logic if necessary
+            break;
+        case 'ServiceWorkers':
+            console.warn('Service Workers are not supported in this browser. Offline functionality may be affected.');
+            // Implement fallback logic if necessary
+            break;
+        default:
+            console.warn(`No fallback available for unsupported feature: ${feature}`);
+            break;
+    }
 }
+
+/**
+ * Initialize cross-browser compatibility checks
+ */
+export function initCrossBrowserCompatibility() {
+    const features = ['WebWorkers', 'LocalStorage', 'ServiceWorkers'];
+    features.forEach(feature => {
+        if (!isFeatureSupported(feature)) {
+            applyFallback(feature);
+        }
+    });
+}
+```
+
+## File: ./static/js/modules/customization.js {#file---static-js-modules-customization-js}
+
+```javascript
+export function initCustomization() {
+    initializeContextMenu();
+}
+
+function initializeContextMenu() {
+    const chartContainer = document.getElementById('candlestick-chart');
+    chartContainer.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showContextMenu(e.clientX, e.clientY);
+    });
+}
+
+function showContextMenu(x, y) {
+    const contextMenu = document.createElement('div');
+    contextMenu.id = 'custom-context-menu';
+    contextMenu.style.position = 'absolute';
+    contextMenu.style.left = `${x}px`;
+    contextMenu.style.top = `${y}px`;
+    contextMenu.style.backgroundColor = '#fff';
+    contextMenu.style.border = '1px solid #ccc';
+    contextMenu.style.zIndex = 1000;
+    contextMenu.innerHTML = `
+        <div class="context-menu-item" onclick="showColorPicker()">Change Background Color</div>
+    `;
+    document.body.appendChild(contextMenu);
+
+    document.addEventListener('click', () => {
+        if (contextMenu) {
+            contextMenu.remove();
+        }
+    }, { once: true });
+}
+
+function showColorPicker() {
+    const colorPicker = document.createElement('input');
+    colorPicker.type = 'color';
+    colorPicker.style.position = 'absolute';
+    colorPicker.style.left = '50%';
+    colorPicker.style.top = '50%';
+    colorPicker.style.transform = 'translate(-50%, -50%)';
+    colorPicker.addEventListener('input', (e) => {
+        changeBackgroundColor(e.target.value);
+    });
+    document.body.appendChild(colorPicker);
+    colorPicker.click();
+    colorPicker.remove();
+}
+
+function changeBackgroundColor(color) {
+    const chartContainer = document.getElementById('candlestick-chart');
+    chartContainer.style.backgroundColor = color;
+    localStorage.setItem('chartBackgroundColor', color);
+}
+
+export function loadSavedBackgroundColor() {
+    const savedColor = localStorage.getItem('chartBackgroundColor');
+    if (savedColor) {
+        const chartContainer = document.getElementById('candlestick-chart');
+        chartContainer.style.backgroundColor = savedColor;
+    }
+}
+```
+
+## File: ./static/js/modules/dataCache.js {#file---static-js-modules-dataCache-js}
+
+```javascript
+class DataCache {
+    constructor() {
+        this.cache = new Map();
+    }
+
+    set(key, value) {
+        this.cache.set(key, value);
+    }
+
+    get(key) {
+        return this.cache.get(key);
+    }
+
+    has(key) {
+        return this.cache.has(key);
+    }
+
+    delete(key) {
+        this.cache.delete(key);
+    }
+
+    clear() {
+        this.cache.clear();
+    }
+}
+
+export default new DataCache();
+```
+
+## File: ./static/js/modules/dataUpdater.js {#file---static-js-modules-dataUpdater-js}
+
+```javascript
+import dataCache from './dataCache.js';
+
+class DataUpdater {
+    constructor(apiEndpoint) {
+        this.apiEndpoint = apiEndpoint;
+    }
+
+    async fetchData(symbol, timeframe) {
+        const cacheKey = `${symbol}_${timeframe}`;
+        if (dataCache.has(cacheKey)) {
+            return dataCache.get(cacheKey);
+        }
+
+        try {
+            const response = await fetch(`${this.apiEndpoint}?symbol=${symbol}&timeframe=${timeframe}`);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const data = await response.json();
+            dataCache.set(cacheKey, data);
+            return data;
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            throw error;
+        }
+    }
+
+    async updateData(symbol, timeframe) {
+        const data = await this.fetchData(symbol, timeframe);
+        // Implement logic to integrate real-time data with cached historical data
+        // This is a placeholder for the actual implementation
+        return data;
+    }
+}
+
+export default DataUpdater;
+```
+
+## File: ./static/js/modules/indicatorManager.js {#file---static-js-modules-indicatorManager-js}
+
+```javascript
+import { renderUTBotAlerts } from '../indicators/utBotAlerts.js';
+import { renderMyriadLabsStrategy } from '../strategies/myriadLabsStrategy.js';
+
+const indicators = {
+    utbotalerts: {
+        name: 'UT Bot Alerts',
+        render: renderUTBotAlerts,
+        category: 'trend'
+    },
+    myriadlabs: {
+        name: 'Myriad Labs Strategy',
+        render: renderMyriadLabsStrategy,
+        category: 'strategy',
+        defaultParams: {
+            showTable: true,
+            tableTextColor: '#ffffff',
+            slTpMode: 'Fixed',
+            maxSlOffset: 3,
+            openPosWithMaxSL: false,
+            tp1Ratio: 1,
+            tp1Share: 100,
+            tp2Ratio: 2,
+            tp2Share: 25,
+            tp3Ratio: 3,
+            tp3Share: 25,
+            moveFwdFSL: true,
+            macdSource: 'close',
+            macdFastLen: 12,
+            macdSlowLen: 26,
+            macdSigLen: 9,
+            divPivotLeftBars: 5,
+            divPivotRightBars: 5,
+            divPivotLookback: 100,
+            divPivotCheck: 10,
+            showDivLines: true,
+            divPosColor: '#ffeb3b',
+            divNegColor: '#ff9800'
+        }
+    }
+};
+
+export function getIndicators() {
+    return Object.entries(indicators).map(([id, indicator]) => ({
+        id,
+        name: indicator.name,
+        category: indicator.category
+    }));
+}
+
+export function renderIndicator(chart, candleSeries, type, params) {
+    console.log(`Rendering indicator: ${type}`);
+    console.log("Params:", params);
+    const indicator = indicators[type];
+    if (indicator && indicator.render) {
+        const fullParams = { ...indicator.defaultParams, ...params };
+        try {
+            const result = indicator.render(chart, candleSeries, candleSeries.data(), fullParams);
+            console.log("Indicator rendering result:", result);
+            return result;
+        } catch (error) {
+            console.error(`Error rendering indicator ${type}:`, error);
+            return null;
+        }
+    }
+    console.error(`Indicator ${type} not found or doesn't have a render function`);
+    return null;
+}
+
+export function getIndicatorDefaultParams(type) {
+    return indicators[type]?.defaultParams || {};
+}
+
 ```
 
 ## File: ./static/js/modules/indicators.js {#file---static-js-modules-indicators-js}
@@ -1729,13 +2669,13 @@ export function initIndicators() {
 function initializeIndicatorsModal() {
     const modal = document.getElementById('indicators-modal');
     const btn = document.getElementById('indicators-button');
-    const span = document.getElementsByClassName('close')[0];
+    const span = document.querySelector('#indicators-modal .close');
     const indicatorsList = document.getElementById('indicators-list');
     const indicatorSearch = document.getElementById('indicator-search');
-    const categoryButtons = document.querySelectorAll('.category-btn');
+    const categoryButtons = document.querySelectorAll('#indicator-categories .category-btn');
 
-    btn.onclick = () => modal.style.display = 'block';
-    span.onclick = () => modal.style.display = 'none';
+    if (btn) btn.onclick = () => { if (modal) modal.style.display = 'block'; };
+    if (span) span.onclick = () => { if (modal) modal.style.display = 'none'; };
     window.onclick = (event) => {
         if (event.target == modal) {
             modal.style.display = 'none';
@@ -1753,30 +2693,34 @@ function initializeIndicatorsModal() {
     ];
 
     function renderIndicators(filteredIndicators) {
-        indicatorsList.innerHTML = '';
-        filteredIndicators.forEach(indicator => {
-            const item = document.createElement('div');
-            item.className = 'indicator-item';
-            item.innerHTML = `
-                <span>${indicator.name}</span>
-                <button class="add-indicator-btn">Add</button>
-                <button class="favorite-btn"><i class="far fa-star"></i></button>
-            `;
-            item.querySelector('.add-indicator-btn').addEventListener('click', () => addIndicator(indicator.name));
-            item.querySelector('.favorite-btn').addEventListener('click', (e) => toggleFavorite(e.target));
-            indicatorsList.appendChild(item);
-        });
+        if (indicatorsList) {
+            indicatorsList.innerHTML = '';
+            filteredIndicators.forEach(indicator => {
+                const item = document.createElement('div');
+                item.className = 'indicator-item';
+                item.innerHTML = `
+                    <span>${indicator.name}</span>
+                    <button class="add-indicator-btn">Add</button>
+                    <button class="favorite-btn"><i class="far fa-star"></i></button>
+                `;
+                item.querySelector('.add-indicator-btn').addEventListener('click', () => addIndicator(indicator.name));
+                item.querySelector('.favorite-btn').addEventListener('click', (e) => toggleFavorite(e.target));
+                indicatorsList.appendChild(item);
+            });
+        }
     }
 
     renderIndicators(indicators);
 
-    indicatorSearch.addEventListener('input', () => {
-        const searchTerm = indicatorSearch.value.toLowerCase();
-        const filteredIndicators = indicators.filter(indicator => 
-            indicator.name.toLowerCase().includes(searchTerm)
-        );
-        renderIndicators(filteredIndicators);
-    });
+    if (indicatorSearch) {
+        indicatorSearch.addEventListener('input', () => {
+            const searchTerm = indicatorSearch.value.toLowerCase();
+            const filteredIndicators = indicators.filter(indicator => 
+                indicator.name.toLowerCase().includes(searchTerm)
+            );
+            renderIndicators(filteredIndicators);
+        });
+    }
 
     categoryButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -1795,11 +2739,196 @@ function addIndicator(indicatorName) {
     console.log(`Adding indicator: ${indicatorName}`);
     // Implement the logic to add the indicator to the chart
     // You might want to call a function from chartFunctions here
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator(indicatorName);
+    }
 }
 
 function toggleFavorite(button) {
     button.classList.toggle('active');
     // Implement the logic to save favorite indicators
+}
+
+export function createChart() {
+    const chartContainer = document.getElementById('candlestick-chart');
+    chart = LightweightCharts.createChart(chartContainer, {
+        width: chartContainer.offsetWidth,
+        height: chartContainer.offsetHeight,
+        layout: {
+            backgroundColor: getComputedStyle(document.body).getPropertyValue('--chart-bg').trim(),
+            textColor: getComputedStyle(document.body).getPropertyValue('--text-color').trim(),
+        },
+        grid: {
+            vertLines: { color: 'rgba(197, 203, 206, 0.5)' },
+            horzLines: { color: 'rgba(197, 203, 206, 5)' },
+        },
+        crosshair: {
+            mode: LightweightCharts.CrosshairMode.Normal,
+        },
+        rightPriceScale: {
+            borderColor: 'rgba(197, 203, 206, 0.8)',
+        },
+        timeScale: {
+            borderColor: 'rgba(197, 203, 206, 0.8)',
+            timeVisible: true,
+            secondsVisible: false,
+        },
+    });
+
+    candleSeries = chart.addCandlestickSeries({
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+        borderVisible: false,
+        wickUpColor: '#26a69a',
+        wickDownColor: '#ef5350',
+    });
+
+    chart.subscribeCrosshairMove(param => {
+        if (param.time) {
+            const data = param.seriesData.get(candleSeries);
+            if (data) {
+                const symbolInfo = document.getElementById('symbol-info');
+                symbolInfo.innerHTML = `O: ${data.open.toFixed(5)} H: ${data.high.toFixed(5)} L: ${data.low.toFixed(5)} C: ${data.close.toFixed(5)}`;
+       
+    });
+
+    chart.timeScale().fitContent();
+
+    chartContainer.addEventListener('mousedown', handleMouseDown);
+    chartContainer.addEventListener('mousemove', handleMouseMove);
+    chartContainer.addEventListener('mouseup', handleMouseUp);
+    chartContainer.addEventListener('contextmenu', handleContextMenu);
+
+}
+
+export function fetchLatestData() {
+    fetch(`/api/candlestick_data?symbol=${currentSymbol}&timeframe=${currentTimeframe}&count=1000`)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.length > 0) {
+                const formattedData = data.map(d => ({
+                    time: new Date(d.time).getTime() / 1000,
+                    open: parseFloat(d.open),
+                    high: parseFloat(d.high),
+                    low: parseFloat(d.low),
+                    close: parseFloat(d.close)
+                }));
+                candleSeries.setData(formattedData);
+                updateSymbolInfo(currentSymbol, formattedData[formattedData.length - 1]);
+                if (activeStrategy) {
+                    applyStrategyToChart(activeStrategy);
+                }
+            }
+        })
+        .catch(error => console.error('Error fetching candlestick data:', error));
+}
+
+window.addEventListener('load', () => {
+    if (chartFunctions && typeof chartFunctions.createChart === 'function') {
+        chartFunctions.createChart();
+        chartFunctions.fetchLatestData();
+    }
+});
+```
+
+## File: ./static/js/modules/pineConnector.js {#file---static-js-modules-pineConnector-js}
+
+```javascript
+export function sendAlert(type, price) {
+    const alertMessage = {
+        type: type,
+        price: price,
+        timestamp: new Date().toISOString()
+    };
+
+    fetch('/api/send_alert', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(alertMessage)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Alert sent successfully:', data);
+    })
+    .catch(error => {
+        console.error('Error sending alert:', error);
+    });
+}
+```
+
+## File: ./static/js/modules/security.js {#file---static-js-modules-security-js}
+
+```javascript
+/**
+ * Security module for Myriad Labs strategy.
+ * This module implements measures to secure sensitive data, especially for the PineConnector integration.
+ * It also includes input validation and sanitization for user-provided strategy parameters.
+ */
+
+/**
+ * Validate and sanitize user-provided strategy parameters.
+ * @param {Object} params - The strategy parameters provided by the user.
+ * @returns {Object} - The sanitized strategy parameters.
+ */
+export function validateAndSanitizeParams(params) {
+    const sanitizedParams = {};
+
+    // Validate and sanitize MACD parameters
+    sanitizedParams.macdParams = {
+        fastPeriod: sanitizeNumber(params.macdParams.fastPeriod, 12),
+        slowPeriod: sanitizeNumber(params.macdParams.slowPeriod, 26),
+        signalPeriod: sanitizeNumber(params.macdParams.signalPeriod, 9)
+    };
+
+    // Validate and sanitize stop-loss and take-profit levels
+    sanitizedParams.sl = sanitizeNumber(params.sl, 10);
+    sanitizedParams.tp1 = sanitizeNumber(params.tp1, 20);
+    sanitizedParams.tp2 = sanitizeNumber(params.tp2, 30);
+    sanitizedParams.tp3 = sanitizeNumber(params.tp3, 40);
+    sanitizedParams.trailingSL = sanitizeBoolean(params.trailingSL, true);
+
+    return sanitizedParams;
+}
+
+/**
+ * Sanitize a number input.
+ * @param {number} value - The input value to sanitize.
+ * @param {number} defaultValue - The default value to use if the input is invalid.
+ * @returns {number} - The sanitized number.
+ */
+function sanitizeNumber(value, defaultValue) {
+    const sanitizedValue = parseInt(value, 10);
+    return isNaN(sanitizedValue) ? defaultValue : sanitizedValue;
+}
+
+/**
+ * Sanitize a boolean input.
+ * @param {boolean} value - The input value to sanitize.
+ * @param {boolean} defaultValue - The default value to use if the input is invalid.
+ * @returns {boolean} - The sanitized boolean.
+ */
+function sanitizeBoolean(value, defaultValue) {
+    return typeof value === 'boolean' ? value : defaultValue;
+}
+
+/**
+ * Secure sensitive data for PineConnector integration.
+ * @param {Object} data - The data to secure.
+ * @returns {Object} - The secured data.
+ */
+export function securePineConnectorData(data) {
+    // Implement security measures for PineConnector data
+    // For example, encrypt the data before sending it to the server
+    const securedData = { ...data };
+    // Add encryption logic here if needed
+    return securedData;
 }
 ```
 
@@ -1807,28 +2936,35 @@ function toggleFavorite(button) {
 
 ```javascript
 export function initSidebar() {
-    document.getElementById('sidebar-toggle').addEventListener('click', toggleSidebar);
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+    }
 }
 
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('collapsed');
-    adjustChartSize();
+    if (sidebar) {
+        sidebar.classList.toggle('collapsed');
+        adjustChartSize();
+    }
 }
 
 function adjustChartSize() {
-    var chartContainer = document.getElementById('chart-container');
-    var sidebar = document.getElementById('sidebar');
-    var watchlistPanel = document.getElementById('watchlist-panel');
+    const chartContainer = document.getElementById('chart-container');
+    const sidebar = document.getElementById('sidebar');
+    const watchlistPanel = document.getElementById('watchlist-panel');
    
-    var sidebarWidth = sidebar.classList.contains('collapsed') ? 50 : 250;
-    var watchlistWidth = watchlistPanel.classList.contains('collapsed') ? 0 : 300;
-   
-    var newWidth = window.innerWidth - sidebarWidth - watchlistWidth;
-    chartContainer.style.width = newWidth + 'px';
-   
-    if (typeof chart !== 'undefined' && chart) {
-        chart.applyOptions({ width: newWidth });
+    if (chartContainer && sidebar && watchlistPanel) {
+        const sidebarWidth = sidebar.classList.contains('collapsed') ? 50 : 250;
+        const watchlistWidth = watchlistPanel.classList.contains('collapsed') ? 0 : 300;
+       
+        const newWidth = window.innerWidth - sidebarWidth - watchlistWidth;
+        chartContainer.style.width = newWidth + 'px';
+       
+        if (window.chartFunctions && window.chartFunctions.adjustChartSize) {
+            window.chartFunctions.adjustChartSize();
+        }
     }
 }
 ```
@@ -1836,7 +2972,9 @@ function adjustChartSize() {
 ## File: ./static/js/modules/strategies.js {#file---static-js-modules-strategies-js}
 
 ```javascript
-let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence'];
+import { myriadLabsStrategy } from '../strategies/myriadLabsStrategy.js';
+
+let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence', 'MACD Strategy', 'Myriad Labs Strategy'];
 let activeStrategy = null;
 
 export function initStrategies() {
@@ -1847,21 +2985,23 @@ function initializeStrategiesDropdown() {
     const dropdown = document.getElementById('strategies-dropdown');
     const dropdownBtn = document.getElementById('strategies-dropdown-btn');
 
-    strategies.forEach(strategy => {
-        const button = document.createElement('button');
-        button.textContent = strategy;
-        button.addEventListener('click', () => selectStrategy(strategy));
-        dropdown.appendChild(button);
-    });
+    if (dropdown && dropdownBtn) {
+        strategies.forEach(strategy => {
+            const button = document.createElement('button');
+            button.textContent = strategy;
+            button.addEventListener('click', () => selectStrategy(strategy));
+            dropdown.appendChild(button);
+        });
 
-    dropdownBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('show');
-    });
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('show');
+        });
 
-    window.addEventListener('click', () => {
-        dropdown.classList.remove('show');
-    });
+        window.addEventListener('click', () => {
+            dropdown.classList.remove('show');
+        });
+    }
 }
 
 function selectStrategy(strategy) {
@@ -1883,28 +3023,166 @@ function applyStrategyToChart(strategy) {
         case 'MACD Divergence':
             addMACDDivergence();
             break;
+        case 'MACD Strategy':
+            addMACDStrategy();
+            break;
+        case 'Myriad Labs Strategy':
+            addMyriadLabsStrategy();
+            break;
     }
 }
 
 function removeExistingStrategyIndicators() {
     console.log('Removing existing strategy indicators');
+    // Implement the logic to remove existing strategy indicators
 }
 
 function addMovingAverageCrossover() {
     console.log('Adding Moving Average Crossover strategy');
-    window.chartFunctions.addIndicator('sma', { period: 10, color: 'blue' });
-    window.chartFunctions.addIndicator('sma', { period: 20, color: 'red' });
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator('sma', { period: 10, color: 'blue' });
+        window.chartFunctions.addChartIndicator('sma', { period: 20, color: 'red' });
+    }
 }
 
 function addRSIStrategy() {
     console.log('Adding RSI Overbought/Oversold strategy');
-    window.chartFunctions.addIndicator('rsi', { period: 14, overbought: 70, oversold: 30 });
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator('rsi', { period: 14, overbought: 70, oversold: 30 });
+    }
 }
 
 function addMACDDivergence() {
     console.log('Adding MACD Divergence strategy');
-    window.chartFunctions.addIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+    }
 }
+
+function addMACDStrategy() {
+    console.log('Adding MACD Strategy');
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+    }
+}
+
+function addMyriadLabsStrategy() {
+    console.log('Adding Myriad Labs Strategy');
+    const candles = window.chartFunctions.getCandles();
+    const params = {
+        macdParams: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+        sl: 10,
+        tp1: 20,
+        tp2: 30,
+        tp3: 40,
+        trailingSL: true
+    };
+    const strategyData = myriadLabsStrategy(candles, params);
+    plotStrategyData(strategyData);
+}
+
+function plotStrategyData(strategyData) {
+    const { macdData, divergences, trades, performanceMetrics } = strategyData;
+    plotMACDDivergence(macdData, divergences);
+    plotEntryExitPoints(trades);
+    plotSLTPLevels(trades);
+    plotPerformanceTable(performanceMetrics);
+}
+```
+
+## File: ./static/js/modules/strategyManager.js {#file---static-js-modules-strategyManager-js}
+
+```javascript
+class StrategyManager {
+    constructor() {
+        this.strategies = {};
+    }
+
+    addStrategy(name, strategy) {
+        this.strategies[name] = strategy;
+    }
+
+    removeStrategy(name) {
+        delete this.strategies[name];
+    }
+
+    enableStrategy(name) {
+        if (this.strategies[name]) {
+            this.strategies[name].enabled = true;
+        }
+    }
+
+    disableStrategy(name) {
+        if (this.strategies[name]) {
+            this.strategies[name].enabled = false;
+        }
+    }
+
+    getStrategy(name) {
+        return this.strategies[name] || null;
+    }
+
+    getAllStrategies() {
+        return this.strategies;
+    }
+}
+
+export default new StrategyManager();
+```
+
+## File: ./static/js/modules/strategySettingsModal.js {#file---static-js-modules-strategySettingsModal-js}
+
+```javascript
+export function showStrategySettingsModal(strategyName, currentParams, onApply) {
+    const modal = document.getElementById('myriadlabs-settings-modal');
+    const modalTitle = modal.querySelector('h2');
+    const form = document.getElementById('myriadlabs-settings-form');
+    const applyButton = document.getElementById('apply-myriadlabs-settings');
+
+    modalTitle.textContent = `${strategyName} Settings`;
+    form.innerHTML = ''; // Clear existing form fields
+
+    // Create form fields based on currentParams
+    for (const [key, value] of Object.entries(currentParams)) {
+        const label = document.createElement('label');
+        label.textContent = key;
+        const input = document.createElement('input');
+        input.type = typeof value === 'number' ? 'number' : 'text';
+        input.value = value;
+        input.name = key;
+        form.appendChild(label);
+        form.appendChild(input);
+    }
+
+    applyButton.onclick = () => {
+        const newParams = {};
+        new FormData(form).forEach((value, key) => {
+            newParams[key] = typeof currentParams[key] === 'number' ? Number(value) : value;
+        });
+        onApply(newParams);
+        modal.style.display = 'none';
+    };
+
+    modal.style.display = 'block';
+}
+
+export function hideStrategySettingsModal() {
+    // Implementation for hiding the strategy settings modal
+    console.log('Hiding strategy settings modal');
+    // Add your modal hide logic here
+}
+
+export function showStrategySettings(indicatorId) {
+    const indicators = getActiveIndicatorsFromModule();
+    const indicator = indicators.find(ind => ind.id === indicatorId);
+    if (indicator && indicator.type === 'myriadlabs') {
+        showStrategySettingsModal('Myriad Labs Strategy', indicator.params, (newParams) => {
+            removeChartIndicator(indicatorId);
+            addChartIndicator('myriadlabs', newParams);
+        });
+    }
+}
+
 ```
 
 ## File: ./static/js/modules/theme.js {#file---static-js-modules-theme-js}
@@ -1916,7 +3194,10 @@ export function initTheme() {
         document.body.classList.add('light-theme');
     }
    
-    document.getElementById('theme-switch').addEventListener('change', toggleTheme);
+    const themeSwitch = document.getElementById('theme-switch');
+    if (themeSwitch) {
+        themeSwitch.addEventListener('change', toggleTheme);
+    }
 }
 
 function toggleTheme() {
@@ -1937,168 +3218,441 @@ function updateChartTheme() {
 }
 ```
 
+## File: ./static/js/modules/tooltips.js {#file---static-js-modules-tooltips-js}
+
+```javascript
+export function addTooltips() {
+    const strategyParams = document.querySelectorAll('#myriadlabs-settings-form label');
+    strategyParams.forEach(label => {
+        const tooltipText = getTooltipText(label.getAttribute('for'));
+        if (tooltipText) {
+            label.setAttribute('title', tooltipText);
+        }
+    });
+}
+
+function getTooltipText(param) {
+    switch (param) {
+        case 'macd-fast-period':
+            return 'The number of periods for the fast moving average in the MACD calculation.';
+        case 'macd-slow-period':
+            return 'The number of periods for the slow moving average in the MACD calculation.';
+        case 'macd-signal-period':
+            return 'The number of periods for the signal line in the MACD calculation.';
+        case 'stop-loss':
+            return 'The stop loss level for the strategy.';
+        case 'take-profit-1':
+            return 'The first take profit level for the strategy.';
+        case 'take-profit-2':
+            return 'The second take profit level for the strategy.';
+        case 'take-profit-3':
+            return 'The third take profit level for the strategy.';
+        case 'trailing-stop-loss':
+            return 'Enable or disable trailing stop loss for the strategy.';
+        default:
+            return '';
+    }
+}
+```
+
 ## File: ./static/js/modules/watchlist.js {#file---static-js-modules-watchlist-js}
 
 ```javascript
-let watchlist = JSON.parse(localStorage.getItem('watchlist')) || ['EUR_USD', 'GBP_USD'];
-
 export function initWatchlist() {
+    let watchlist = JSON.parse(localStorage.getItem('watchlist')) || ['EUR_USD', 'GBP_USD'];
+
     const watchlistSearch = document.getElementById('watchlist-search');
     const categoryButton = document.getElementById('instrument-category-button');
     const categoryContent = document.getElementById('instrument-category-content');
+    const watchlistToggle = document.getElementById('watchlist-toggle');
 
-    watchlistSearch.addEventListener('input', debounce(handleSearch, 300));
+    if (watchlistSearch) {
+        watchlistSearch.addEventListener('input', debounce(handleSearch, 300));
+    }
 
-    categoryButton.addEventListener('click', () => {
-        categoryContent.classList.toggle('show');
-    });
-
-    document.querySelectorAll('#instrument-category-content a').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            categoryButton.textContent = item.textContent;
-            categoryContent.classList.remove('show');
-            handleSearch();
+    if (categoryButton && categoryContent) {
+        categoryButton.addEventListener('click', () => {
+            categoryContent.classList.toggle('show');
         });
-    });
+
+        document.querySelectorAll('#instrument-category-content a').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                categoryButton.textContent = item.textContent;
+                categoryContent.classList.remove('show');
+                handleSearch();
+            });
+        });
+    }
+
+    if (watchlistToggle) {
+        watchlistToggle.addEventListener('click', toggleWatchlist);
+    }
 
     window.addEventListener('click', (e) => {
-        if (!e.target.matches('#instrument-category-button')) {
+        if (categoryContent && !e.target.matches('#instrument-category-button')) {
             categoryContent.classList.remove('show');
         }
     });
 
-    document.getElementById('watchlist-toggle').addEventListener('click', toggleWatchlist);
-
     updateWatchlistUI();
-}
 
-function toggleWatchlist() {
-    const watchlistPanel = document.getElementById('watchlist-panel');
-    watchlistPanel.classList.toggle('collapsed');
-    const toggleButton = document.getElementById('watchlist-toggle');
-    toggleButton.classList.toggle('hidden');
-    adjustChartSize();
-}
-
-function handleSearch() {
-    const query = document.getElementById('watchlist-search').value.trim();
-    const category = document.getElementById('instrument-category-button').textContent.toLowerCase();
-   
-    if (query.length > 0 || category !== 'all') {
-        searchInstruments(query, category);
-    } else {
-        document.getElementById('search-results').innerHTML = '';
+    function toggleWatchlist() {
+        const watchlistPanel = document.getElementById('watchlist-panel');
+        if (watchlistPanel) {
+            watchlistPanel.classList.toggle('collapsed');
+            watchlistToggle.classList.toggle('hidden');
+            adjustChartSize();
+        }
     }
-}
 
-function searchInstruments(query, category) {
-    fetch(`/api/search_instruments?query=${query}&category=${category}`)
-        .then(response => response.json())
-        .then(data => {
-            updateSearchResults(data);
-        })
-        .catch(error => console.error('Error searching instruments:', error));
-}
-
-function updateSearchResults(results) {
-    const searchResults = document.getElementById('search-results');
-    searchResults.innerHTML = '';
-    results.forEach(instrument => {
-        const item = document.createElement('div');
-        item.className = 'search-result-item';
-        item.innerHTML = `
-            <span class="instrument-name">${instrument}</span>
-            <button class="add-btn">${watchlist.includes(instrument) ? '-' : '+'}</button>
-        `;
-        item.querySelector('.instrument-name').addEventListener('click', () => {
-            window.chartFunctions.switchSymbol(instrument);
-        });
-        item.querySelector('.add-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (watchlist.includes(instrument)) {
-                removeFromWatchlist(instrument);
-            } else {
-                addToWatchlist(instrument);
+    function handleSearch() {
+        const query = document.getElementById('watchlist-search').value.trim();
+        const category = document.getElementById('instrument-category-button').textContent.toLowerCase();
+       
+        if (query.length > 0 || category !== 'all') {
+            searchInstruments(query, category);
+        } else {
+            const searchResults = document.getElementById('search-results');
+            if (searchResults) {
+                searchResults.innerHTML = '';
             }
-            e.target.textContent = watchlist.includes(instrument) ? '-' : '+';
-        });
-        searchResults.appendChild(item);
-    });
-}
+        }
+    }
 
-function addToWatchlist(symbol) {
-    if (!watchlist.includes(symbol)) {
-        watchlist.push(symbol);
+    function searchInstruments(query, category) {
+        fetch(`/api/search_instruments?query=${query}&category=${category}`)
+            .then(response => response.json())
+            .then(data => {
+                updateSearchResults(data);
+            })
+            .catch(error => console.error('Error searching instruments:', error));
+    }
+
+    function updateSearchResults(results) {
+        const searchResults = document.getElementById('search-results');
+        if (searchResults) {
+            searchResults.innerHTML = '';
+            results.forEach(instrument => {
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.innerHTML = `
+                    <span class="instrument-name">${instrument}</span>
+                    <button class="add-btn">${watchlist.includes(instrument) ? '-' : '+'}</button>
+                `;
+                item.querySelector('.instrument-name').addEventListener('click', () => {
+                    if (window.chartFunctions && window.chartFunctions.switchSymbol) {
+                        window.chartFunctions.switchSymbol(instrument);
+                    }
+                });
+                item.querySelector('.add-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (watchlist.includes(instrument)) {
+                        removeFromWatchlist(instrument);
+                    } else {
+                        addToWatchlist(instrument);
+                    }
+                    e.target.textContent = watchlist.includes(instrument) ? '-' : '+';
+                });
+                searchResults.appendChild(item);
+            });
+        }
+    }
+
+    function addToWatchlist(symbol) {
+        if (!watchlist.includes(symbol)) {
+            watchlist.push(symbol);
+            saveWatchlist();
+            updateWatchlistUI();
+        }
+    }
+
+    function removeFromWatchlist(symbol) {
+        watchlist = watchlist.filter(s => s !== symbol);
         saveWatchlist();
         updateWatchlistUI();
     }
-}
 
-function removeFromWatchlist(symbol) {
-    watchlist = watchlist.filter(s => s !== symbol);
-    saveWatchlist();
-    updateWatchlistUI();
-}
+    function saveWatchlist() {
+        localStorage.setItem('watchlist', JSON.stringify(watchlist));
+    }
 
-function saveWatchlist() {
-    localStorage.setItem('watchlist', JSON.stringify(watchlist));
-}
+    function updateWatchlistUI() {
+        const container = document.getElementById('watchlist-container');
+        if (container) {
+            container.innerHTML = '';
+            watchlist.forEach(symbol => {
+                const item = document.createElement('div');
+                item.className = 'watchlist-item';
+                item.setAttribute('draggable', true);
+                item.dataset.symbol = symbol;
+                item.innerHTML = `
+                    <span class="symbol">${symbol}</span>
+                    <span class="price">--</span>
+                    <span class="change">--</span>
+                    <button class="remove-btn">-</button>
+                `;
+                item.querySelector('.remove-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeFromWatchlist(symbol);
+                });
+                item.addEventListener('click', () => {
+                    if (window.chartFunctions && window.chartFunctions.switchSymbol) {
+                        window.chartFunctions.switchSymbol(symbol);
+                    }
+                });
+                container.appendChild(item);
+            });
+            updateWatchlistData();
+        }
+    }
 
-function updateWatchlistUI() {
-    const container = document.getElementById('watchlist-container');
-    container.innerHTML = '';
-    watchlist.forEach(symbol => {
-        const item = document.createElement('div');
-        item.className = 'watchlist-item';
-        item.setAttribute('draggable', true);
-        item.dataset.symbol = symbol;
-        item.innerHTML = `
-            <span class="symbol">${symbol}</span>
-            <span class="price">--</span>
-            <span class="change">--</span>
-            <button class="remove-btn">-</button>
-        `;
-        item.querySelector('.remove-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            removeFromWatchlist(symbol);
+    function updateWatchlistData() {
+        watchlist.forEach(symbol => {
+            fetch(`/api/price_data?symbol=${symbol}`)
+                .then(response => response.json())
+                .then(data => {
+                    const item = document.querySelector(`.watchlist-item[data-symbol="${symbol}"]`);
+                    if (item && data.price) {
+                        item.querySelector('.price').textContent = data.price.toFixed(5);
+                        item.querySelector('.change').textContent = data.change.toFixed(2) + '%';
+                    }
+                })
+                .catch(error => console.error('Error fetching price data:', error));
         });
-        item.addEventListener('click', () => {
-            window.chartFunctions.switchSymbol(symbol);
-        });
-        container.appendChild(item);
-    });
-    updateWatchlistData();
-}
+    }
 
-function updateWatchlistData() {
-    watchlist.forEach(symbol => {
-        fetch(`/api/price_data?symbol=${symbol}`)
-            .then(response => response.json())
-            .then(data => {
-                const item = document.querySelector(`.watchlist-item[data-symbol="${symbol}"]`);
-                if (item && data.price) {
-                    item.querySelector('.price').textContent = data.price.toFixed(5);
-                    item.querySelector('.change').textContent = data.change.toFixed(2) + '%';
-                }
-            })
-            .catch(error => console.error('Error fetching price data:', error));
-    });
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
             clearTimeout(timeout);
-            func(...args);
+            timeout = setTimeout(later, wait);
         };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+    }
+
+    function adjustChartSize() {
+        if (window.chartFunctions && window.chartFunctions.adjustChartSize) {
+            window.chartFunctions.adjustChartSize();
+        }
+    }
+
+    setInterval(updateWatchlistData, 60000);
+}
+```
+
+## File: ./static/js/modules/zoomPan.js {#file---static-js-modules-zoomPan-js}
+
+```javascript
+export function initZoomPan() {
+    const chartContainer = document.getElementById('candlestick-chart');
+    chartContainer.addEventListener('wheel', handleZoom);
+    chartContainer.addEventListener('mousedown', handlePanStart);
+    chartContainer.addEventListener('mousemove', handlePanMove);
+    chartContainer.addEventListener('mouseup', handlePanEnd);
+    chartContainer.addEventListener('mouseleave', handlePanEnd);
+}
+
+let isPanning = false;
+let startX = 0;
+let startScrollLeft = 0;
+
+function handleZoom(event) {
+    event.preventDefault();
+    const delta = Math.sign(event.deltaY);
+    if (delta > 0) {
+        window.chartFunctions.zoomOut();
+    } else {
+        window.chartFunctions.zoomIn();
+    }
+}
+
+function handlePanStart(event) {
+    isPanning = true;
+    startX = event.pageX - chartContainer.offsetLeft;
+    startScrollLeft = chartContainer.scrollLeft;
+}
+
+function handlePanMove(event) {
+    if (!isPanning) return;
+    const x = event.pageX - chartContainer.offsetLeft;
+    const walk = (x - startX) * 2; // Adjust the multiplier for faster/slower panning
+    chartContainer.scrollLeft = startScrollLeft - walk;
+}
+
+function handlePanEnd() {
+    isPanning = false;
+}
+```
+
+## File: ./static/js/strategies/macd_divergence.py {#file---static-js-strategies-macd-divergence-py}
+
+```python
+import pandas as pd
+import numpy as np
+
+def calculate_macd(data, fast_period=12, slow_period=26, signal_period=9):
+    data['ema_fast'] = data['close'].ewm(span=fast_period, adjust=False).mean()
+    data['ema_slow'] = data['close'].ewm(span=slow_period, adjust=False).mean()
+    data['macd'] = data['ema_fast'] - data['ema_slow']
+    data['signal'] = data['macd'].ewm(span=signal_period, adjust=False).mean()
+    data['histogram'] = data['macd'] - data['signal']
+    return data
+
+def identify_divergences(data):
+    divergences = []
+    for i in range(1, len(data) - 1):
+        if data['macd'][i] > data['macd'][i - 1] and data['macd'][i] > data['macd'][i + 1] and data['close'][i] < data['close'][i - 1] and data['close'][i] < data['close'][i + 1]:
+            divergences.append((data.index[i], 'bearish'))
+        elif data['macd'][i] < data['macd'][i - 1] and data['macd'][i] < data['macd'][i + 1] and data['close'][i] > data['close'][i - 1] and data['close'][i] > data['close'][i + 1]:
+            divergences.append((data.index[i], 'bullish'))
+    return divergences
+
+def execute_trade(signal, current_price, stop_loss, take_profit):
+    if signal == 'buy':
+        entry_price = current_price
+        sl_price = entry_price - stop_loss
+        tp_price = entry_price + take_profit
+        return {'entry': entry_price, 'stop_loss': sl_price, 'take_profit': tp_price, 'type': 'buy'}
+    elif signal == 'sell':
+        entry_price = current_price
+        sl_price = entry_price + stop_loss
+        tp_price = entry_price - take_profit
+        return {'entry': entry_price, 'stop_loss': sl_price, 'take_profit': tp_price, 'type': 'sell'}
+    return None
+
+def macd_divergence_strategy(data, stop_loss=0.001, take_profit=0.002):
+    data = calculate_macd(data)
+    divergences = identify_divergences(data)
+    trades = []
+    for divergence in divergences:
+        if divergence[1] == 'bullish':
+            trade = execute_trade('buy', data['close'][divergence[0]], stop_loss, take_profit)
+        elif divergence[1] == 'bearish':
+            trade = execute_trade('sell', data['close'][divergence[0]], stop_loss, take_profit)
+        if trade:
+            trades.append(trade)
+    return trades
+```
+
+## File: ./static/js/strategies/myriadLabsStrategy.js {#file---static-js-strategies-myriadLabsStrategy-js}
+
+```javascript
+import { calculateMACD, detectDivergences, calculatePerformanceMetrics } from '../modules/indicators.js';
+import { sendAlert } from '../modules/pineConnector.js';
+
+export function myriadLabsStrategy(candles, params) {
+    const { macdParams, sl, tp1, tp2, tp3, trailingSL } = params;
+
+    // Calculate MACD
+    const macdData = calculateMACD(candles, macdParams);
+
+    // Detect divergences
+    const divergences = detectDivergences(macdData);
+
+    // Initialize trades and performance metrics
+    let trades = [];
+    let performanceMetrics = {
+        netProfit: 0,
+        totalTradesClosed: 0,
+        percentProfitable: 0,
+        profitFactor: 0,
+        maxDrawdown: 0,
+        averageTrade: 0
+    };
+
+    // Implement trading logic based on divergences
+    divergences.forEach(divergence => {
+        const { type, start, end } = divergence;
+        const price = candles[end].close;
+
+        if (type === 'positive' && price > candles[start].high) {
+            // Enter long position
+            const trade = {
+                entry: price,
+                sl: price - sl,
+                tp1: price + tp1,
+                tp2: price + tp2,
+                tp3: price + tp3,
+                trailingSL: trailingSL ? price - sl : null,
+                status: 'open'
+            };
+            trades.push(trade);
+            sendAlert('long', price);
+        } else if (type === 'negative' && price < candles[start].low) {
+            // Enter short position
+            const trade = {
+                entry: price,
+                sl: price + sl,
+                tp1: price - tp1,
+                tp2: price - tp2,
+                tp3: price - tp3,
+                trailingSL: trailingSL ? price + sl : null,
+                status: 'open'
+            };
+            trades.push(trade);
+            sendAlert('short', price);
+        }
+    });
+
+    // Update performance metrics after each trade
+    trades.forEach(trade => {
+        if (trade.status === 'closed') {
+            performanceMetrics = calculatePerformanceMetrics(trades);
+        }
+    });
+
+    return {
+        macdData,
+        divergences,
+        trades,
+        performanceMetrics
     };
 }
+```
 
-setInterval(updateWatchlistData, 60000);
+## File: ./static/js/strategies/strategy_manager.py {#file---static-js-strategies-strategy-manager-py}
+
+```python
+class StrategyManager:
+    def __init__(self):
+        self.strategies = {}
+
+    def add_strategy(self, name, strategy_function):
+        if name not in self.strategies:
+            self.strategies[name] = strategy_function
+            print(f"Strategy {name} added.")
+        else:
+            print(f"Strategy {name} already exists.")
+
+    def remove_strategy(self, name):
+        if name in self.strategies:
+            del self.strategies[name]
+            print(f"Strategy {name} removed.")
+        else:
+            print(f"Strategy {name} does not exist.")
+
+    def execute_strategy(self, name, data):
+        if name in self.strategies:
+            return self.strategies[name](data)
+        else:
+            print(f"Strategy {name} does not exist.")
+            return None
+
+# Example usage
+if __name__ == "__main__":
+    from macd_divergence import macd_divergence_strategy
+
+    manager = StrategyManager()
+    manager.add_strategy("MACD Divergence", macd_divergence_strategy)
+
+    # Assuming 'data' is a DataFrame with the necessary structure
+    data = None  # Replace with actual data
+    trades = manager.execute_strategy("MACD Divergence", data)
+    print(trades)
 ```
 
 ## File: ./templates/index.html {#file---templates-index-html}
@@ -2181,6 +3735,19 @@ setInterval(updateWatchlistData, 60000);
                 </div>
                 <div id="symbol-info"></div>
                 <div id="candlestick-chart"></div>
+                <div id="performance-table-container">
+                    <table id="performance-table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Performance metrics will be dynamically added here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <aside id="watchlist-panel" class="panel">
                 <h3>Watchlist <button id="watchlist-toggle" class="icon-button"><i class="fas fa-chevron-right"></i></button></h3>
@@ -2246,15 +3813,83 @@ setInterval(updateWatchlistData, 60000);
                 <span class="close">&times;</span>
             </div>
             <div id="myriadlabs-settings-form">
-                <!-- Strategy settings form will be dynamically added here -->
+                <label for="macd-fast-period">MACD Fast Period:</label>
+                <input type="number" id="macd-fast-period" name="macd-fast-period" value="12">
+                <label for="macd-slow-period">MACD Slow Period:</label>
+                <input type="number" id="macd-slow-period" name="macd-slow-period" value="26">
+                <label for="macd-signal-period">MACD Signal Period:</label>
+                <input type="number" id="macd-signal-period" name="macd-signal-period" value="9">
+                <label for="stop-loss">Stop Loss:</label>
+                <input type="number" id="stop-loss" name="stop-loss" value="10">
+                <label for="take-profit-1">Take Profit 1:</label>
+                <input type="number" id="take-profit-1" name="take-profit-1" value="20">
+                <label for="take-profit-2">Take Profit 2:</label>
+                <input type="number" id="take-profit-2" name="take-profit-2" value="30">
+                <label for="take-profit-3">Take Profit 3:</label>
+                <input type="number" id="take-profit-3" name="take-profit-3" value="40">
+                <label for="trailing-stop-loss">Trailing Stop Loss:</label>
+                <input type="checkbox" id="trailing-stop-loss" name="trailing-stop-loss">
             </div>
             <button id="apply-myriadlabs-settings">Apply Settings</button>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chart.js') }}" type="module"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}" type="module"></script>
 </body>
 </html>
+```
+
+## File: ./tests/myriadLabsStrategy.test.js {#file---tests-myriadLabsStrategy-test-js}
+
+```javascript
+import { myriadLabsStrategy } from '../static/js/strategies/myriadLabsStrategy';
+
+describe('Myriad Labs Strategy', () => {
+    const sampleCandles = [
+        { time: 1, open: 1.1, high: 1.2, low: 1.0, close: 1.15 },
+        { time: 2, open: 1.15, high: 1.25, low: 1.1, close: 1.2 },
+        { time: 3, open: 1.2, high: 1.3, low: 1.15, close: 1.25 },
+        { time: 4, open: 1.25, high: 1.35, low: 1.2, close: 1.3 },
+        { time: 5, open: 1.3, high: 1.4, low: 1.25, close: 1.35 },
+        { time: 6, open: 1.35, high: 1.45, low: 1.3, close: 1.4 },
+        { time: 7, open: 1.4, high: 1.5, low: 1.35, close: 1.45 },
+        { time: 8, open: 1.45, high: 1.55, low: 1.4, close: 1.5 },
+        { time: 9, open: 1.5, high: 1.6, low: 1.45, close: 1.55 },
+        { time: 10, open: 1.55, high: 1.65, low: 1.5, close: 1.6 }
+    ];
+
+    const params = {
+        macdParams: { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 },
+        sl: 10,
+        tp1: 20,
+        tp2: 30,
+        tp3: 40,
+        trailingSL: true
+    };
+
+    it('should return strategy data with correct structure', () => {
+        const strategyData = myriadLabsStrategy(sampleCandles, params);
+        expect(strategyData).toHaveProperty('macdData');
+        expect(strategyData).toHaveProperty('divergences');
+        expect(strategyData).toHaveProperty('trades');
+        expect(strategyData).toHaveProperty('performanceMetrics');
+    });
+
+    it('should detect divergences correctly', () => {
+        const strategyData = myriadLabsStrategy(sampleCandles, params);
+        expect(strategyData.divergences.length).toBeGreaterThan(0);
+    });
+
+    it('should calculate performance metrics correctly', () => {
+        const strategyData = myriadLabsStrategy(sampleCandles, params);
+        expect(strategyData.performanceMetrics).toHaveProperty('netProfit');
+        expect(strategyData.performanceMetrics).toHaveProperty('totalTradesClosed');
+        expect(strategyData.performanceMetrics).toHaveProperty('percentProfitable');
+        expect(strategyData.performanceMetrics).toHaveProperty('profitFactor');
+        expect(strategyData.performanceMetrics).toHaveProperty('maxDrawdown');
+        expect(strategyData.performanceMetrics).toHaveProperty('averageTrade');
+    });
+});
 ```
 
