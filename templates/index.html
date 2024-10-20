@@ -128,6 +128,10 @@
             </div>
             <div id="indicators-list">
                 <!-- Indicator items will be dynamically added here -->
+                <div class="indicator-item">
+                    <span>MyriadLabs</span>
+                    <button class="add-indicator-btn" id="add-myriadlabs-btn">Add</button>
+                </div>
             </div>
         </div>
     </div>
@@ -148,5 +152,12 @@
 
     <script src="{{ url_for('static', filename='js/chart.js') }}" type="module"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}" type="module"></script>
+    <script>
+        document.getElementById('add-myriadlabs-btn').addEventListener('click', () => {
+            if (window.chartFunctions && window.chartFunctions.applyMyriadLabsStrategy) {
+                window.chartFunctions.applyMyriadLabsStrategy();
+            }
+        });
+    </script>
 </body>
 </html>
