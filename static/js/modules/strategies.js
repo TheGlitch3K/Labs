@@ -1,4 +1,4 @@
-let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence', 'MACD Strategy'];
+let strategies = ['Moving Average Crossover', 'RSI Overbought/Oversold', 'MACD Divergence', 'MACD Strategy', 'Myriad Labs Strategy'];
 let activeStrategy = null;
 
 export function initStrategies() {
@@ -50,6 +50,9 @@ function applyStrategyToChart(strategy) {
         case 'MACD Strategy':
             addMACDStrategy();
             break;
+        case 'Myriad Labs Strategy':
+            addMyriadLabsStrategy();
+            break;
     }
 }
 
@@ -84,5 +87,12 @@ function addMACDStrategy() {
     console.log('Adding MACD Strategy');
     if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
         window.chartFunctions.addChartIndicator('macd', { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
+    }
+}
+
+function addMyriadLabsStrategy() {
+    console.log('Adding Myriad Labs Strategy');
+    if (window.chartFunctions && window.chartFunctions.addChartIndicator) {
+        window.chartFunctions.addChartIndicator('myriadLabs', { param1: 'value1', param2: 'value2' });
     }
 }

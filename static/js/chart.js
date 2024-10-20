@@ -20,7 +20,7 @@ export function createChart() {
         },
         grid: {
             vertLines: { color: 'rgba(197, 203, 206, 0.5)' },
-            horzLines: { color: 'rgba(197, 203, 206, 0.5)' },
+            horzLines: { color: 'rgba(197, 203, 206, 5)' },
         },
         crosshair: {
             mode: LightweightCharts.CrosshairMode.Normal,
@@ -225,8 +225,12 @@ export function addChartIndicator(type, params = {}) {
             break;
         // Add more indicator types as needed
     }
-    addIndicator({ type, series: indicator, params });
-    // Calculate and set data for the indicator
+    if (indicator) {
+        addIndicator({ type, series: indicator, params });
+        // Calculate and set data for the indicator
+    } else {
+        console.error(`Failed to add indicator: ${type}`);
+    }
 }
 
 export function removeChartIndicator(index) {
